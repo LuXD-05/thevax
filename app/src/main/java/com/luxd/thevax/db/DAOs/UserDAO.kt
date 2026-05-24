@@ -12,6 +12,7 @@ class UserDAO(private val db: SQLiteDatabase) {
     /**
      * Adds a user
      * @param user the user to add
+     * @return the id of the added user
      */
     fun add(user: User): Int {
         val cv = ContentValues().apply {
@@ -32,8 +33,10 @@ class UserDAO(private val db: SQLiteDatabase) {
      * @return true if the user was updated, false otherwise
      */
     fun update(id: Int, fieldsToUpdate: Map<String, Any?>): Boolean {
+        // No fields to update --> returns false
         if (fieldsToUpdate.isEmpty()) return false
 
+        // Dynamically builds the query & parameters from fieldsToUpdate
         val setClause = fieldsToUpdate.keys.joinToString(", ") { "$it = ?" }
         val sql = "UPDATE users SET $setClause WHERE id = ?"
         val args = (fieldsToUpdate.values + id).toTypedArray()
@@ -74,12 +77,15 @@ class UserDAO(private val db: SQLiteDatabase) {
      * @return the user if found, null otherwise
      */
     fun findByEmail(email: String): User? {
-        val cursor = db.rawQuery("SELECT * FROM users WHERE id = ? LIMIT 1", arrayOf(email))
+        val cursor = db.rawQuery("SELECT * FROM users WHERE email = ? LIMIT 1", arrayOf(email))
         return cursor.use {
             if (it.moveToFirst()) it.toUser() else null
         }
     }
 
+    /**
+     * Gets the user from a Cursor
+     */
     private fun Cursor.toUser() = User(
         id = getInt(getColumnIndexOrThrow("id")),
         email = getString(getColumnIndexOrThrow("email")),
