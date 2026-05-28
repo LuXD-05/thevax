@@ -20,10 +20,10 @@ class UserRepository(app: Context, db: DatabaseHelper) {
      * @param registerDTO the registration info object (User + Therapies + ClinicalConditions)
      * @return true if the user was registered, false otherwise
      */
-    fun register(registerDTO: RegisterDTO): Boolean {
+    fun register(registerDTO: RegisterDTO): User? {
         // Check for duplicate user (if email exists)
         if (userDAO.findByEmail(registerDTO.email) != null)
-            return false
+            return null
 
         // Creates an user with hashed password
         val user = User(
@@ -50,7 +50,7 @@ class UserRepository(app: Context, db: DatabaseHelper) {
         // Saves user in session
         session.saveUserId(userId)
 
-        return true
+        return user
     }
 
     /**
