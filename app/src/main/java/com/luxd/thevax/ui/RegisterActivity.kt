@@ -1,4 +1,4 @@
-package com.luxd.thevax.ui.auth
+package com.luxd.thevax.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,11 +9,13 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
-import com.luxd.thevax.MainActivity
 import com.luxd.thevax.R
 import com.luxd.thevax.databinding.ActivityRegisterBinding
 import com.luxd.thevax.db.DatabaseHelper
@@ -34,11 +36,19 @@ class RegisterActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
         repo = UserRepository(this, DatabaseHelper(this))
 
         //Binding to activity_register
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.register) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()

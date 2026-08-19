@@ -1,12 +1,14 @@
-package com.luxd.thevax.ui.auth
+package com.luxd.thevax.ui
 
 import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.snackbar.Snackbar
 import com.luxd.thevax.databinding.ActivityLoginBinding
-import com.luxd.thevax.MainActivity
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.services.SessionService
@@ -19,6 +21,8 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
         repo = UserRepository(this, DatabaseHelper(this))
 
         // If already logged, go directly to MainActivity
@@ -30,6 +34,12 @@ class LoginActivity : AppCompatActivity() {
 
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.login) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         // Handler click login button
         binding.btnLogin.setOnClickListener {
