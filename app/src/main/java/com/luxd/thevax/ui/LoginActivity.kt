@@ -15,15 +15,17 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-    private val repo = UserRepository(this, DatabaseHelper(this))
+    private lateinit var repo: UserRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        repo = UserRepository(this, DatabaseHelper(this))
 
         // If already logged, go directly to MainActivity
         if (SessionService.getInstance(this).isLoggedIn()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
+            return
         }
 
         binding = ActivityLoginBinding.inflate(layoutInflater)

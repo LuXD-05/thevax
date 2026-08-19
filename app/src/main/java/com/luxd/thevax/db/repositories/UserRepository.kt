@@ -4,6 +4,8 @@ import android.content.Context
 import com.luxd.thevax.db.entities.User
 import com.luxd.thevax.db.entities.RegisterDTO
 import com.luxd.thevax.db.DAOs.UserDAO
+import com.luxd.thevax.db.DAOs.TherapyDAO
+import com.luxd.thevax.db.DAOs.ClinicalConditionDAO
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.services.SessionService
 import com.luxd.thevax.services.PasswordService
@@ -12,7 +14,10 @@ class UserRepository(app: Context, db: DatabaseHelper) {
 
     // TODO: handle operations in a background thread (like async/await, in order to not make the app crash & keep the main thread for the UI)
 
-    private val userDAO = UserDAO(db.writableDatabase)
+    private val database = db.writableDatabase
+    private val userDAO = UserDAO(database)
+    private val therapyDAO = TherapyDAO(database)
+    private val conditionDAO = ClinicalConditionDAO(database)
     private val session = SessionService.getInstance(app)
 
     /**
@@ -35,22 +40,30 @@ class UserRepository(app: Context, db: DatabaseHelper) {
             sex = registerDTO.sex
         )
 
-        // Adds the user & retrieves its id
-        val userId = userDAO.add(user)
+        database.beginTransaction()
+        val userId: Int
+        try {
+            userId = userDAO.add(user)
+            if (userId <= 0) return null
 
-        // Saves all therapies
-        registerDTO.therapies.forEach { therapy ->
-            //therapyDAO.addForUser(userId, therapy)
-        }
-        // Saves all clinical conditions
-        registerDTO.conditions.forEach { condition ->
-            //conditionDAO.addForUser(userId, condition)
+            // If there are any, saves all therapies
+            registerDTO.therapies.forEach { therapy ->
+                if (therapyDAO.addForUser(userId, therapy) <= 0) return null
+            }
+
+            //Same for clinical conditions
+            registerDTO.conditions.forEach { condition ->
+                if (conditionDAO.addForUser(userId, condition) <= 0) return null
+            }
+            database.setTransactionSuccessful()
+        } finally {
+            database.endTransaction()
         }
 
         // Saves user in session
         session.saveUserId(userId)
 
-        return user
+        return user.copy(id = userId)
     }
 
     /**

@@ -211,11 +211,10 @@
                         android:gravity="center"
                         android:paddingVertical="8dp" />
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvTherapies"
+                    <ListView
+                        android:id="@+id/lvTherapies"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:nestedScrollingEnabled="true" />
+                        android:layout_height="wrap_content" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

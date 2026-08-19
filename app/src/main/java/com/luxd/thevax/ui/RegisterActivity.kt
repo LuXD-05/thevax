@@ -2,11 +2,20 @@ package com.luxd.thevax.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.util.Patterns
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
-import com.luxd.thevax.databinding.ActivityRegisterBinding
 import com.luxd.thevax.MainActivity
+import com.luxd.thevax.R
+import com.luxd.thevax.databinding.ActivityRegisterBinding
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.RegisterDTO
@@ -16,45 +25,49 @@ import com.luxd.thevax.db.repositories.UserRepository
 class RegisterActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRegisterBinding
+    private val therapies = mutableListOf<Therapy>()
+    private val conditions = mutableListOf<ClinicalCondition>()
+    private val therapyLabels = mutableListOf<String>()
+    private lateinit var therapyAdapter: ArrayAdapter<String>
 
-    private val repo = UserRepository(this, DatabaseHelper(this))
+    private lateinit var repo: UserRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        repo = UserRepository(this, DatabaseHelper(this))
+
+        //Binding to activity_register
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+        binding.btnRegister.setOnClickListener { register() }
 
-        binding.btnRegister.setOnClickListener {
-            register()
-        }
+        therapyAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, therapyLabels)
+        binding.lvTherapies.adapter = therapyAdapter
+        binding.btnAddTherapy.setOnClickListener { showAddTherapyDialog() }
+        binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
     }
 
     private fun register() {
-        // 1. Retrieve data with BINDING
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString()
         val confirm = binding.etConfirmPassword.text.toString()
         val firstName = binding.etFirstName.text.toString().trim()
         val lastName = binding.etLastName.text.toString().trim()
         val ageStr = binding.etAge.text.toString()
-        val sex = if (binding.radioFemale.isChecked) "F" else "M"   // no need to check
-        // TODO: therapies e CC
+        val sex = if (binding.radioFemale.isChecked) "F" else "M"
 
-        // 1. No fields can be empty
-        if (email.isBlank() || password.isBlank() || confirm.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank() || sex.isBlank()) {
+        if (email.isBlank() || password.isBlank() || confirm.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank()) {
             showError("Tutti i campi sono obbligatori.")
             return
         }
-        // 2. Valid email with regex
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             showError("Inserisci un'email valida.")
             return
         }
-        // 3. Check psw (minimum 8 char)
         if (password.length < 8) {
             showError("La password deve avere almeno 8 caratteri.")
             return
@@ -63,14 +76,12 @@ class RegisterActivity : AppCompatActivity() {
             showError("Le password non coincidono.")
             return
         }
-        // 4. Check valid age (0-130)
         val age = ageStr.toIntOrNull()
         if (age == null || age < 0 || age > 130) {
             showError("Inserisci un'età valida (0-130).")
             return
         }
 
-        // 3. DB LOGIC (Use of repository)
         val registerInfo = RegisterDTO(
             email = email,
             password = password,
@@ -78,27 +89,112 @@ class RegisterActivity : AppCompatActivity() {
             lastName = lastName,
             age = age,
             sex = sex,
-            // TODO: cosa fare con questi??? c'è da rifare la struttura db prima di push
-            therapies = emptyList<Therapy>(),
-            conditions = emptyList<ClinicalCondition>()
+            therapies = therapies.toList(),
+            conditions = conditions.toList()
         )
-
-        // TODO: register deve ritornare un user (come login) null se errore
         val user = repo.register(registerInfo)
 
-        // If user logged
         if (user != null) {
-            // Load MainActivity
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         } else {
-            // The same email is already present
-            showError("Errore: questa email è già registrata")
+            showError("Errore: questa email è già registrata o non è stato possibile salvare i dati.")
         }
+    }
+
+    private fun showAddTherapyDialog() {
+        val drugName = EditText(this).apply {
+            hint = getString(R.string.therapy_name)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val category = EditText(this).apply {
+            hint = getString(R.string.therapy_category)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val margin = (24 * resources.displayMetrics.density).toInt()
+            setPadding(margin, 0, margin, 0)
+            addView(drugName, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            addView(category, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.add_therapy)
+            .setView(container)
+            .setPositiveButton(R.string.add, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = drugName.text.toString().trim()
+                val type = category.text.toString().trim()
+                if (name.isBlank()) {
+                    drugName.error = getString(R.string.therapy_name)
+                    return@setOnClickListener
+                }
+                if (type.isBlank()) {
+                    category.error = getString(R.string.therapy_category)
+                    return@setOnClickListener
+                }
+                therapies.add(Therapy(userId = 0, drugName = name, drugCategory = type))
+                therapyLabels.add("$name - $type")
+                therapyAdapter.notifyDataSetChanged()
+                binding.tvNoTherapies.visibility = View.GONE
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showAddConditionDialog() {
+        val conditionName = EditText(this).apply {
+            hint = getString(R.string.condition_name)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.add_condition)
+            .setView(conditionName)
+            .setPositiveButton(R.string.add, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = conditionName.text.toString().trim()
+                if (name.isBlank()) {
+                    conditionName.error = getString(R.string.condition_name)
+                    return@setOnClickListener
+                }
+                if (conditions.any { it.conditionName.equals(name, ignoreCase = true) }) {
+                    conditionName.error = getString(R.string.condition_already_added)
+                    return@setOnClickListener
+                }
+                conditions.add(ClinicalCondition(userId = 0, conditionName = name))
+                renderConditions()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun renderConditions() {
+        binding.chipGroupConditions.removeAllViews()
+        conditions.forEach { condition ->
+            val chip = Chip(this).apply {
+                text = condition.conditionName
+                isCloseIconVisible = true
+                setOnCloseIconClickListener {
+                    conditions.remove(condition)
+                    renderConditions()
+                }
+            }
+            binding.chipGroupConditions.addView(chip)
+        }
+        binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun showError(msg: String) {
         Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
     }
-
 }

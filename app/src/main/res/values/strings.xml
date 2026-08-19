@@ -18,4 +18,11 @@
     <string name="no_therapies">Nessuna terapia inserita</string>
     <string name="conditions">Condizioni cliniche</string>
     <string name="no_conditions">Nessuna condizione inserita</string>
+    <string name="add_therapy">Aggiungi terapia</string>
+    <string name="add_condition">Aggiungi condizione</string>
+    <string name="therapy_name">Nome del farmaco</string>
+    <string name="therapy_category">Categoria della terapia</string>
+    <string name="condition_name">Nome della condizione</string>
+    <string name="condition_already_added">Condizione già inserita</string>
+    <string name="cancel">Annulla</string>
 </resources>
