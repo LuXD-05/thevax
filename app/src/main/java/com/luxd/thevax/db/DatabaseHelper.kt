@@ -1,20 +1,19 @@
 package com.luxd.thevax.db
 
 import android.content.Context
-import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "TheVax.db", null, 1) {
 
-    // TODO: gestire ogni operazione SQL in un thread in background invece che sul main thread (così da non far crashare l'app) con tipo async/await
+    // TODO: handle operations in a background thread (like async/await, in order to not make the app crash & keep the main thread for the UI)
 
-    // OnCreate: called once when DB is created
+    // Called once when DB is first created
     override fun onCreate(db: SQLiteDatabase) {
         // Creates DB & FKs from schema
         DbInfo.createDB(db)
 
-        // TODO: inserire Therapies e Vaccines nelle tabelle (prendendo dati da fonti esterne)
+        // TODO: inserire Therapies, Vaccines e ClinicalConditions nelle tabelle (prendendo dati da fonti esterne)
         // Esempio: // db.execSQL("INSERT INTO vaccines (name, vaccine_type) VALUES ('Influenza', 'inactivated')")
     }
 
@@ -27,14 +26,15 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "TheVax.db", 
         onCreate(db)
     }
 
-    // Not needed
-    // override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-    //     onUpgrade(db, oldVersion, newVersion)
-    // }
+    // Called when downgrading DB version
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        onUpgrade(db, oldVersion, newVersion)
+    }
 
+    // Called when opening DB
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
-        // Enables FK
+        // Enables FKs
         if (!db.isReadOnly)
             db.execSQL("PRAGMA foreign_keys=ON;")
     }
