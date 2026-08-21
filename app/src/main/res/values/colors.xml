@@ -10,4 +10,5 @@
     <color name="on_surface">#1A2332</color>
     <color name="text_secondary">#607D8B</color>
     <color name="divider">#E0E7EF</color>
+    <color name="exit">#B71C1C</color>
 </resources>
