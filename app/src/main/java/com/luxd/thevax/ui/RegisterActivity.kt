@@ -2,13 +2,10 @@ package com.luxd.thevax.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
 import android.util.Patterns
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.EditText
-import android.widget.LinearLayout
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +16,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.luxd.thevax.R
 import com.luxd.thevax.databinding.ActivityRegisterBinding
 import com.luxd.thevax.db.DatabaseHelper
+import com.luxd.thevax.db.DAOs.TherapyDAO
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.RegisterDTO
 import com.luxd.thevax.db.entities.Therapy
@@ -27,20 +25,20 @@ import com.luxd.thevax.db.repositories.UserRepository
 class RegisterActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRegisterBinding
-    private val therapies = mutableListOf<Therapy>()
     private val conditions = mutableListOf<ClinicalCondition>()
-    private val therapyLabels = mutableListOf<String>()
-    private lateinit var therapyAdapter: ArrayAdapter<String>
+    private var therapiesList = listOf<Therapy>()
 
     private lateinit var repo: UserRepository
+    private lateinit var therapyDAO: TherapyDAO
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        repo = UserRepository(this, DatabaseHelper(this))
+        val dbHelper = DatabaseHelper(this)
+        repo = UserRepository(this, dbHelper)
+        therapyDAO = TherapyDAO(dbHelper.readableDatabase)
 
-        //Binding to activity_register
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -55,10 +53,17 @@ class RegisterActivity : AppCompatActivity() {
         }
         binding.btnRegister.setOnClickListener { register() }
 
-        therapyAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, therapyLabels)
-        binding.lvTherapies.adapter = therapyAdapter
-        binding.btnAddTherapy.setOnClickListener { showAddTherapyDialog() }
+        setupTherapyDropdown()
         binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
+    }
+
+    private fun setupTherapyDropdown() {
+        therapiesList = therapyDAO.getAll()
+        val labels = mutableListOf(getString(R.string.none))
+        labels.addAll(therapiesList.map { it.name })
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, labels)
+        binding.autoCompleteTherapy.setAdapter(adapter)
     }
 
     private fun register() {
@@ -69,6 +74,10 @@ class RegisterActivity : AppCompatActivity() {
         val lastName = binding.etLastName.text.toString().trim()
         val ageStr = binding.etAge.text.toString()
         val sex = if (binding.radioFemale.isChecked) "F" else "M"
+
+        val selectedText = binding.autoCompleteTherapy.text.toString()
+        val selectedIndex = therapiesList.map { it.name }.indexOf(selectedText)
+        val therapyId = if (selectedIndex != -1) therapiesList[selectedIndex].id else null
 
         if (email.isBlank() || password.isBlank() || confirm.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank()) {
             showError("Tutti i campi sono obbligatori.")
@@ -99,7 +108,7 @@ class RegisterActivity : AppCompatActivity() {
             lastName = lastName,
             age = age,
             sex = sex,
-            therapies = therapies.toList(),
+            therapyId = therapyId,
             conditions = conditions.toList()
         )
         val user = repo.register(registerInfo)
@@ -112,55 +121,10 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
 
-    private fun showAddTherapyDialog() {
-        val drugName = EditText(this).apply {
-            hint = getString(R.string.therapy_name)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
-        }
-        val category = EditText(this).apply {
-            hint = getString(R.string.therapy_category)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
-        }
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val margin = (24 * resources.displayMetrics.density).toInt()
-            setPadding(margin, 0, margin, 0)
-            addView(drugName, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            addView(category, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.add_therapy)
-            .setView(container)
-            .setPositiveButton(R.string.add, null)
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = drugName.text.toString().trim()
-                val type = category.text.toString().trim()
-                if (name.isBlank()) {
-                    drugName.error = getString(R.string.therapy_name)
-                    return@setOnClickListener
-                }
-                if (type.isBlank()) {
-                    category.error = getString(R.string.therapy_category)
-                    return@setOnClickListener
-                }
-                therapies.add(Therapy(userId = 0, drugName = name, drugCategory = type))
-                therapyLabels.add("$name - $type")
-                therapyAdapter.notifyDataSetChanged()
-                binding.tvNoTherapies.visibility = View.GONE
-                dialog.dismiss()
-            }
-        }
-        dialog.show()
-    }
-
     private fun showAddConditionDialog() {
         val conditionName = EditText(this).apply {
             hint = getString(R.string.condition_name)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.add_condition)

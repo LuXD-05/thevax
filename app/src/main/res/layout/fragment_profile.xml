@@ -26,14 +26,28 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Dati del paziente"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary"
-                    android:layout_marginBottom="16dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_profile"
+                        android:layout_marginEnd="12dp"
+                        app:tint="?attr/colorPrimary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dati del paziente"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -111,7 +125,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Terapie -->
+        <!-- Terapia -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -125,45 +139,19 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
-                    <TextView
-                        android:layout_width="0dp"
+                    android:hint="Terapia biologica">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteTherapy"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Terapie biologiche"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary" />
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddTherapy"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="+ Aggiungi"
-                        android:textSize="12sp"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:cornerRadius="8dp" />
-                </LinearLayout>
+                        android:inputType="none" />
 
-                <TextView
-                    android:id="@+id/tvNoTherapies"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Nessuna terapia inserita"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    android:gravity="center"
-                    android:paddingVertical="8dp" />
-
-                <LinearLayout
-                    android:id="@+id/llTherapies"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
+                </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -178,44 +178,19 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <LinearLayout
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="12dp">
-                        <TextView
-                            android:layout_width="0dp"
+                        android:hint="@string/therapies">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/autoCompleteTherapy"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/therapies"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/primary" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddTherapy"
-                            android:layout_width="wrap_content"
-                            android:layout_height="40dp"
-                            android:text="@string/add"
-                            android:textSize="12sp"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            app:cornerRadius="8dp" />
-                    </LinearLayout>
+                            android:inputType="none" />
 
-                    <TextView
-                        android:id="@+id/tvNoTherapies"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/no_therapies"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:gravity="center"
-                        android:paddingVertical="8dp" />
-
-                    <ListView
-                        android:id="@+id/lvTherapies"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

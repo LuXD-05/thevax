@@ -10,7 +10,8 @@ data class User(
     val firstName: String,
     val lastName: String,
     val age: Int,
-    val sex: String
+    val sex: String,
+    val therapyId: Int? = null
 )
 
 /**
@@ -23,6 +24,6 @@ data class RegisterDTO(
     val lastName: String,
     val age: Int,
     val sex: String,
-    val therapies: List<Therapy>,
+    val therapyId: Int?,
     val conditions: List<ClinicalCondition>
 )

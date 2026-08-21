@@ -1,20 +1,23 @@
 package com.luxd.thevax.ui
 
 import android.content.ContentValues
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
+import com.luxd.thevax.R
 import com.luxd.thevax.databinding.FragmentProfileBinding
 import com.luxd.thevax.db.DAOs.UserDAO
+import com.luxd.thevax.db.DAOs.TherapyDAO
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.Therapy
@@ -23,16 +26,15 @@ import com.luxd.thevax.services.SessionService
 
 class ProfileFragment : Fragment() {
 
-    // Binding della view del fragment
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var userDao: UserDAO
+    private lateinit var therapyDao: TherapyDAO
 
-    private val therapies = mutableListOf<Therapy>()
     private val conditions = mutableListOf<ClinicalCondition>()
-
+    private var therapiesList = listOf<Therapy>()
     private var currentUser: User? = null
 
     override fun onCreateView(
@@ -49,13 +51,23 @@ class ProfileFragment : Fragment() {
 
         dbHelper = DatabaseHelper(requireContext())
         userDao = UserDAO(dbHelper.writableDatabase)
+        therapyDao = TherapyDAO(dbHelper.readableDatabase)
 
+        setupTherapyDropdown()
         loadUserData()
 
         binding.btnSaveProfile.setOnClickListener { saveProfile() }
-        binding.btnAddTherapy.setOnClickListener { showAddTherapyDialog() }
         binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
         binding.btnLogout.setOnClickListener { logout() }
+    }
+
+    private fun setupTherapyDropdown() {
+        therapiesList = therapyDao.getAll()
+        val labels = mutableListOf(getString(R.string.none))
+        labels.addAll(therapiesList.map { it.name })
+
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, labels)
+        binding.autoCompleteTherapy.setAdapter(adapter)
     }
 
     private fun loadUserData() {
@@ -80,31 +92,16 @@ class ProfileFragment : Fragment() {
             binding.rbMale.isChecked = true
         }
 
-        loadTherapies(user.id)
-        loadConditions(user.id)
-    }
-
-    private fun loadTherapies(userId: Int) {
-        therapies.clear()
-        val db = dbHelper.readableDatabase
-
-        try {
-            // Le terapie vengono lette dalla tabella e poi mostrate nella schermata.
-            db.rawQuery("SELECT * FROM therapies", null).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
-                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
-                    val description = cursor.getString(cursor.getColumnIndexOrThrow("description")) ?: ""
-
-                    therapies.add(Therapy(id, userId.toLong(), name, description))
-                }
+        user.therapyId?.let { tid ->
+            val therapy = therapiesList.find { it.id == tid }
+            therapy?.let {
+                binding.autoCompleteTherapy.setText(it.name, false)
             }
-        } catch (e: Exception) {
-            // In caso di errore mostriamo comunque la schermata senza bloccare tutto.
-            e.printStackTrace()
+        } ?: run {
+            binding.autoCompleteTherapy.setText(getString(R.string.none), false)
         }
 
-        renderTherapies()
+        loadConditions(user.id)
     }
 
     private fun loadConditions(userId: Int) {
@@ -119,7 +116,6 @@ class ProfileFragment : Fragment() {
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
                     val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
-
                     conditions.add(ClinicalCondition(id, userId.toLong(), name))
                 }
             }
@@ -132,7 +128,8 @@ class ProfileFragment : Fragment() {
 
     private fun saveProfile() {
         val user = currentUser ?: return
-        val age = binding.etAge.text.toString().toIntOrNull()
+        val ageStr = binding.etAge.text.toString()
+        val age = ageStr.toIntOrNull()
 
         if (age == null || age !in 0..130) {
             showError("Inserisci un'età valida (0-130).")
@@ -140,59 +137,35 @@ class ProfileFragment : Fragment() {
         }
 
         val sex = if (binding.rbFemale.isChecked) "F" else "M"
-        val fields = mapOf("age" to age, "sex" to sex)
+        
+        val selectedText = binding.autoCompleteTherapy.text.toString()
+        val selectedIndex = therapiesList.map { it.name }.indexOf(selectedText)
+        val therapyId = if (selectedIndex != -1) therapiesList[selectedIndex].id else null
+
+        val fields = mutableMapOf<String, Any?>()
+        fields["age"] = age
+        fields["sex"] = sex
+        fields["therapy_id"] = therapyId
+        fields["first_name"] = binding.etFirstName.text.toString().trim()
+        fields["last_name"] = binding.etLastName.text.toString().trim()
 
         if (userDao.update(user.id, fields)) {
-            // Aggiorniamo anche l'utente che abbiamo già in memoria.
-            currentUser = user.copy(age = age, sex = sex)
+            currentUser = user.copy(
+                firstName = fields["first_name"] as String,
+                lastName = fields["last_name"] as String,
+                age = age,
+                sex = sex,
+                therapyId = therapyId
+            )
             Snackbar.make(binding.root, "Profilo aggiornato!", Snackbar.LENGTH_SHORT).show()
         } else {
             showError("Errore durante il salvataggio.")
         }
     }
 
-    private fun showAddTherapyDialog() {
-        val layout = LinearLayout(requireContext())
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
-
-        val etName = EditText(requireContext())
-        etName.hint = "Nome farmaco"
-
-        val etDesc = EditText(requireContext())
-        etDesc.hint = "Categoria"
-
-        layout.addView(etName)
-        layout.addView(etDesc)
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Nuova Terapia")
-            .setView(layout)
-            .setPositiveButton("Aggiungi") { _, _ ->
-                val name = etName.text.toString().trim()
-                val desc = etDesc.text.toString().trim()
-
-                if (name.isNotEmpty()) {
-                    val values = ContentValues()
-                    values.put("name", name)
-                    values.put("description", desc)
-
-                    val id = dbHelper.writableDatabase.insert("therapies", null, values)
-
-                    if (id != -1L) {
-                        val userId = currentUser?.id ?: 0
-                        therapies.add(Therapy(id, userId.toLong(), name, desc))
-                        renderTherapies()
-                    }
-                }
-            }
-            .setNegativeButton("Annulla", null)
-            .show()
-    }
-
     private fun showAddConditionDialog() {
         val etName = EditText(requireContext())
-        etName.hint = "Nome condizione"
+        etName.hint = getString(R.string.condition_name)
 
         val container = LinearLayout(requireContext())
         container.setPadding(50, 40, 50, 10)
@@ -203,64 +176,40 @@ class ProfileFragment : Fragment() {
         )
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Nuova Condizione")
+            .setTitle(getString(R.string.add_condition))
             .setView(container)
-            .setPositiveButton("Aggiungi") { _, _ ->
-                val name = etName.text.toString().trim()
+            .setPositiveButton(getString(R.string.add), object : DialogInterface.OnClickListener {
+                override fun onClick(dialog: DialogInterface?, which: Int) {
+                    val name = etName.text.toString().trim()
+                    if (name.isNotEmpty()) {
+                        val userId = currentUser?.id ?: return
+                        val db = dbHelper.writableDatabase
 
-                if (name.isNotEmpty()) {
-                    val userId = currentUser?.id ?: return@setPositiveButton
-                    val db = dbHelper.writableDatabase
+                        var condId = -1L
+                        db.rawQuery("SELECT id FROM conditions WHERE name = ?", arrayOf(name)).use { cursor ->
+                            if (cursor.moveToFirst()) condId = cursor.getLong(0)
+                        }
 
-                    var condId = -1L
+                        if (condId == -1L) {
+                            val values = ContentValues()
+                            values.put("name", name)
+                            condId = db.insert("conditions", null, values)
+                        }
 
-                    db.rawQuery(
-                        "SELECT id FROM conditions WHERE name = ?",
-                        arrayOf(name)
-                    ).use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            condId = cursor.getLong(0)
+                        if (condId != -1L) {
+                            val values = ContentValues()
+                            values.put("user_id", userId)
+                            values.put("condition_id", condId)
+                            db.insert("user_conditions", null, values)
+
+                            conditions.add(ClinicalCondition(condId, userId.toLong(), name))
+                            renderConditions()
                         }
                     }
-
-                    if (condId == -1L) {
-                        val values = ContentValues()
-                        values.put("name", name)
-                        condId = db.insert("conditions", null, values)
-                    }
-
-                    if (condId != -1L) {
-                        val values = ContentValues()
-                        values.put("user_id", userId)
-                        values.put("condition_id", condId)
-                        db.insert("user_conditions", null, values)
-
-                        conditions.add(
-                            ClinicalCondition(condId, userId.toLong(), name)
-                        )
-                        renderConditions()
-                    }
                 }
-            }
-            .setNegativeButton("Annulla", null)
+            })
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
-    }
-
-    private fun renderTherapies() {
-        binding.llTherapies.removeAllViews()
-
-        for (therapy in therapies) {
-            val tv = TextView(requireContext())
-            tv.text = "${therapy.drugName} - ${therapy.drugCategory}"
-            tv.setPadding(0, 8, 0, 8)
-            binding.llTherapies.addView(tv)
-        }
-
-        if (therapies.isEmpty()) {
-            binding.tvNoTherapies.visibility = View.VISIBLE
-        } else {
-            binding.tvNoTherapies.visibility = View.GONE
-        }
     }
 
     private fun renderConditions() {
@@ -285,16 +234,11 @@ class ProfileFragment : Fragment() {
             binding.chipGroupConditions.addView(chip)
         }
 
-        if (conditions.isEmpty()) {
-            binding.tvNoConditions.visibility = View.VISIBLE
-        } else {
-            binding.tvNoConditions.visibility = View.GONE
-        }
+        binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun logout() {
         SessionService.getInstance(requireContext()).clear()
-
         val intent = Intent(requireContext(), LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)

@@ -3,16 +3,16 @@
     <item
         android:id="@+id/home_tab"
         android:title="Home"
+        android:icon="@drawable/ic_home"
         />
-<!--        android:icon="@android:drawable/ic_menu_home"-->
     <item
         android:id="@+id/calendar_tab"
         android:title="Calendar"
+        android:icon="@drawable/ic_calendar"
         />
-<!--        android:icon="@android:drawable/ic_menu_my_calendar"-->
     <item
         android:id="@+id/profile_tab"
         android:title="Profile"
+        android:icon="@drawable/ic_profile"
         />
-<!--        android:icon="@android:drawable/ic_menu_manage"-->
 </menu>

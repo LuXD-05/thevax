@@ -37,7 +37,8 @@ class UserRepository(app: Context, db: DatabaseHelper) {
             firstName = registerDTO.firstName,
             lastName = registerDTO.lastName,
             age = registerDTO.age,
-            sex = registerDTO.sex
+            sex = registerDTO.sex,
+            therapyId = registerDTO.therapyId
         )
 
         database.beginTransaction()
@@ -45,11 +46,6 @@ class UserRepository(app: Context, db: DatabaseHelper) {
         try {
             userId = userDAO.add(user)
             if (userId <= 0) return null
-
-            // If there are any, saves all therapies
-            registerDTO.therapies.forEach { therapy ->
-                if (therapyDAO.addForUser(userId, therapy) <= 0) return null
-            }
 
             //Same for clinical conditions
             registerDTO.conditions.forEach { condition ->

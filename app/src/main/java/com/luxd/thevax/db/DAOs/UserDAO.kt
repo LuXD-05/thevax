@@ -22,6 +22,7 @@ class UserDAO(private val db: SQLiteDatabase) {
             put("last_name", user.lastName)
             put("age", user.age)
             put("sex", user.sex)
+            put("therapy_id", user.therapyId)
         }
         return db.insert("users", null, cv).toInt()
     }
@@ -93,7 +94,8 @@ class UserDAO(private val db: SQLiteDatabase) {
         firstName = getString(getColumnIndexOrThrow("first_name")),
         lastName = getString(getColumnIndexOrThrow("last_name")),
         age = getInt(getColumnIndexOrThrow("age")),
-        sex = getString(getColumnIndexOrThrow("sex"))
+        sex = getString(getColumnIndexOrThrow("sex")),
+        therapyId = if (isNull(getColumnIndexOrThrow("therapy_id"))) null else getInt(getColumnIndexOrThrow("therapy_id"))
     )
 
 }
