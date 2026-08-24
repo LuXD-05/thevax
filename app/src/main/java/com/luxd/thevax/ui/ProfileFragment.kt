@@ -1,255 +1,206 @@
 package com.luxd.thevax.ui
 
-import android.content.ContentValues
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.util.Patterns
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.luxd.thevax.R
 import com.luxd.thevax.databinding.FragmentProfileBinding
-import com.luxd.thevax.db.DAOs.UserDAO
-import com.luxd.thevax.db.DAOs.TherapyDAO
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.Therapy
 import com.luxd.thevax.db.entities.User
+import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.services.SessionService
+import kotlin.toString
 
-class ProfileFragment : Fragment() {
+class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
-    private var _binding: FragmentProfileBinding? = null
-    private val binding get() = _binding!!
+	private var _binding: FragmentProfileBinding? = null
+	private val binding get() = _binding!!
 
-    private lateinit var dbHelper: DatabaseHelper
-    private lateinit var userDao: UserDAO
-    private lateinit var therapyDao: TherapyDAO
+	private lateinit var dbHelper: DatabaseHelper
+	private lateinit var repo: UserRepository
+	private lateinit var currentUser: User
 
-    private val conditions = mutableListOf<ClinicalCondition>()
-    private var therapiesList = listOf<Therapy>()
-    private var currentUser: User? = null
+	private var therapies = listOf<Therapy>()
+	private var conditions = listOf<ClinicalCondition>()
+	private var userConditions = mutableListOf<ClinicalCondition>()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentProfileBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
+		_binding = FragmentProfileBinding.bind(view)
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+		// Inits
+		dbHelper = DatabaseHelper(requireContext())
+		repo = UserRepository(requireContext(), dbHelper)
+		// TODO: implementare (se non riesci faccio io) (e magari togliere getUserId() e sostituire con getUser().id dove serve)
+		currentUser = SessionService.getInstance(requireContext()).getUser()
 
-        dbHelper = DatabaseHelper(requireContext())
-        userDao = UserDAO(dbHelper.writableDatabase)
-        therapyDao = TherapyDAO(dbHelper.readableDatabase)
+		// Get therapies
+		therapies = repo.getTherapies()
 
-        setupTherapyDropdown()
-        loadUserData()
+		// Get all conditions + user's conditions
+		conditions = repo.getConditions()
+		userConditions = repo.getConditionsForUser(currentUser.id).toMutableList()
 
-        binding.btnSaveProfile.setOnClickListener { saveProfile() }
-        binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
-        binding.btnLogout.setOnClickListener { logout() }
-    }
+		// Setup dropdown with therapies & conditions
+		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
+		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray() //TODO: dropdown?
+		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
+		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
 
-    private fun setupTherapyDropdown() {
-        therapiesList = therapyDao.getAll()
-        val labels = mutableListOf(getString(R.string.none))
-        labels.addAll(therapiesList.map { it.name })
+		// HANDLERS
 
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, labels)
-        binding.autoCompleteTherapy.setAdapter(adapter)
-    }
+		binding.btnSaveProfile.setOnClickListener { saveProfile() }
+		binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
+		binding.btnLogout.setOnClickListener { logout() }
 
-    private fun loadUserData() {
-        val session = SessionService.getInstance(requireContext())
-        val userId = session.getUserId()
+		// Loads user data
+		loadData()
+	}
 
-        if (userId == -1) {
-            logout()
-            return
-        }
+	private fun loadData() {
+		// Setup user fields
+		binding.etFirstName.setText(currentUser.firstName)
+		binding.etLastName.setText(currentUser.lastName)
+		binding.etAge.setText(currentUser.age.toString())
 
-        currentUser = userDao.findById(userId)
-        val user = currentUser ?: return
+		if (currentUser.sex == "F") {
+			binding.rbMale.isChecked = false
+			binding.rbFemale.isChecked = true
+		} else {
+			binding.rbMale.isChecked = true
+			binding.rbFemale.isChecked = false
+		}
 
-        binding.etFirstName.setText(user.firstName)
-        binding.etLastName.setText(user.lastName)
-        binding.etAge.setText(user.age.toString())
+		val currentTherapyName = therapies.find { it.id == currentUser.therapyId }?.name ?: "Nessuna"
+		binding.autoCompleteTherapy.setText(currentTherapyName, false)
 
-        if (user.sex == "F") {
-            binding.rbFemale.isChecked = true
-        } else {
-            binding.rbMale.isChecked = true
-        }
+		// Setup user's conditions
+		renderConditions()
+	}
 
-        user.therapyId?.let { tid ->
-            val therapy = therapiesList.find { it.id == tid }
-            therapy?.let {
-                binding.autoCompleteTherapy.setText(it.name, false)
-            }
-        } ?: run {
-            binding.autoCompleteTherapy.setText(getString(R.string.none), false)
-        }
+	// TODO: commentare (😢)
+	private fun renderConditions() {
+		binding.chipGroupConditions.removeAllViews()
 
-        loadConditions(user.id)
-    }
+		for (condition in userConditions) {
+			val chip = Chip(requireContext()).apply {
+				text = condition.conditionName
+				isCloseIconVisible = true
+				setOnCloseIconClickListener {
+					// Remove condition
+					userConditions = (userConditions - condition).toMutableList()
+				}
+			}
+			binding.chipGroupConditions.addView(chip)
+		}
 
-    private fun loadConditions(userId: Int) {
-        conditions.clear()
-        val db = dbHelper.readableDatabase
-        val sql = "SELECT c.id, c.name FROM conditions c " +
-                "JOIN user_conditions uc ON c.id = uc.condition_id " +
-                "WHERE uc.user_id = ?"
+		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
+	}
 
-        try {
-            db.rawQuery(sql, arrayOf(userId.toString())).use { cursor ->
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
-                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
-                    conditions.add(ClinicalCondition(id, userId.toLong(), name))
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+	private fun saveProfile() {
+		// Get user data from DTO
+		val firstName = binding.etFirstName.text.toString().trim()
+		val lastName = binding.etLastName.text.toString().trim()
+		val ageStr = binding.etAge.text.toString()
+		val sex = if (binding.rbFemale.isChecked) "F" else "M"
+		// TODO: aggiungere et x email e password in fragment_profile
+		val email = binding.etEmail.text.toString().trim()
+		val password = binding.etPassword.text.toString()
 
-        renderConditions()
-    }
+		// Get selected therapy
+		val selectedTherapyText = binding.autoCompleteTherapy.text.toString()
+		val selectedTherapyId = therapies.find { it.name == selectedTherapyText }?.id
 
-    private fun saveProfile() {
-        val user = currentUser ?: return
-        val ageStr = binding.etAge.text.toString()
-        val age = ageStr.toIntOrNull()
+		// Validates fields
+		if (email.isBlank() || password.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank()) {
+			showError("Tutti i campi sono obbligatori.")
+			return
+		}
+		if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+			showError("Inserisci un'email valida.")
+			return
+		}
+		if (password.length < 8) {
+			showError("La password deve avere almeno 8 caratteri.")
+			return
+		}
+		val age = ageStr.toIntOrNull()
+		if (age == null || age < 0 || age > 130) {
+			showError("Inserisci un'età valida (0-130).")
+			return
+		}
+		if (selectedTherapyText != "Nessuna" && selectedTherapyId == null) {
+			showError("Terapia invalida.")
+			return
+		}
 
-        if (age == null || age !in 0..130) {
-            showError("Inserisci un'età valida (0-130).")
-            return
-        }
+		// Builds dynamic map of users fields
+		val fields = mutableMapOf<String, Any?>()
+		fields["first_name"] = firstName
+		fields["last_name"] = lastName
+		fields["age"] = age
+		fields["sex"] = sex
+		fields["email"] = email
+		fields["password"] = password
+		fields["therapy_id"] = selectedTherapyId
+		fields["conditions"] = userConditions.toList()
 
-        val sex = if (binding.rbFemale.isChecked) "F" else "M"
-        
-        val selectedText = binding.autoCompleteTherapy.text.toString()
-        val selectedIndex = therapiesList.map { it.name }.indexOf(selectedText)
-        val therapyId = if (selectedIndex != -1) therapiesList[selectedIndex].id else null
+		// Updates the user in db
+		if (repo.update(SessionService.getInstance(requireContext()).getUserId(), fields)) {
+			Snackbar.make(binding.root, "Profilo aggiornato", Snackbar.LENGTH_LONG).show()
+		} else {
+			showError("Errore: questa email è già registrata o non è stato possibile salvare i dati.")
+		}
+	}
 
-        val fields = mutableMapOf<String, Any?>()
-        fields["age"] = age
-        fields["sex"] = sex
-        fields["therapy_id"] = therapyId
-        fields["first_name"] = binding.etFirstName.text.toString().trim()
-        fields["last_name"] = binding.etLastName.text.toString().trim()
+	// TODO: impedire crazione di nuove conditions (solo dropdown da cui si selezionano conditions statiche dal db)
+	// DINA ALERT! gemini ha rifatto sto metodo, debuggalo e vedi cosa fa (p.s. lo ho gia modificato io un po meglio, dovrebbe essere a posto)
+	private fun showAddConditionDialog() {
+		// Filter conditions not already added
+		val selectableConditions = conditions.filter { it.id !in userConditions.map { uc -> uc.id }.toSet() }
 
-        if (userDao.update(user.id, fields)) {
-            currentUser = user.copy(
-                firstName = fields["first_name"] as String,
-                lastName = fields["last_name"] as String,
-                age = age,
-                sex = sex,
-                therapyId = therapyId
-            )
-            Snackbar.make(binding.root, "Profilo aggiornato!", Snackbar.LENGTH_SHORT).show()
-        } else {
-            showError("Errore durante il salvataggio.")
-        }
-    }
+		// TODO: non necessario? far apparire texttview fissa con "nessuna condizione disponibile" o non far apparire niente?
+		// (che poi tale textview dovrebbe esserci gia che mi pare di averla vista)
+		if (selectableConditions.isEmpty()) {
+			Snackbar.make(binding.root, "Nessuna nuova condizione disponibile", Snackbar.LENGTH_SHORT).show()
+			return
+		}
 
-    private fun showAddConditionDialog() {
-        val etName = EditText(requireContext())
-        etName.hint = getString(R.string.condition_name)
+		// Shows conditions dialog
+		AlertDialog.Builder(requireContext())
+			.setTitle(getString(R.string.add_condition))
+			.setItems(selectableConditions.map { it.conditionName }.toTypedArray()) { _, which ->
+				val selected = selectableConditions[which]
+				// Adds contition
+				userConditions = (userConditions + selected).toMutableList()
+			}
+			.setNegativeButton(getString(R.string.cancel), null)
+			.show()
+	}
 
-        val container = LinearLayout(requireContext())
-        container.setPadding(50, 40, 50, 10)
-        container.addView(
-            etName,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
+	private fun logout() {
+		// Clears user in session
+		SessionService.getInstance(requireContext()).clear()
+		// Goes to login + clear backStack
+		val intent = Intent(requireContext(), LoginActivity::class.java)
+		intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+		startActivity(intent)
+	}
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.add_condition))
-            .setView(container)
-            .setPositiveButton(getString(R.string.add), object : DialogInterface.OnClickListener {
-                override fun onClick(dialog: DialogInterface?, which: Int) {
-                    val name = etName.text.toString().trim()
-                    if (name.isNotEmpty()) {
-                        val userId = currentUser?.id ?: return
-                        val db = dbHelper.writableDatabase
+	private fun showError(msg: String) {
+		Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+	}
 
-                        var condId = -1L
-                        db.rawQuery("SELECT id FROM conditions WHERE name = ?", arrayOf(name)).use { cursor ->
-                            if (cursor.moveToFirst()) condId = cursor.getLong(0)
-                        }
-
-                        if (condId == -1L) {
-                            val values = ContentValues()
-                            values.put("name", name)
-                            condId = db.insert("conditions", null, values)
-                        }
-
-                        if (condId != -1L) {
-                            val values = ContentValues()
-                            values.put("user_id", userId)
-                            values.put("condition_id", condId)
-                            db.insert("user_conditions", null, values)
-
-                            conditions.add(ClinicalCondition(condId, userId.toLong(), name))
-                            renderConditions()
-                        }
-                    }
-                }
-            })
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
-
-    private fun renderConditions() {
-        binding.chipGroupConditions.removeAllViews()
-
-        for (condition in conditions) {
-            val chip = Chip(requireContext())
-            chip.text = condition.conditionName
-            chip.isCloseIconVisible = true
-
-            chip.setOnCloseIconClickListener {
-                dbHelper.writableDatabase.delete(
-                    "user_conditions",
-                    "user_id = ? AND condition_id = ?",
-                    arrayOf(currentUser?.id.toString(), condition.id.toString())
-                )
-
-                conditions.remove(condition)
-                renderConditions()
-            }
-
-            binding.chipGroupConditions.addView(chip)
-        }
-
-        binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
-    }
-
-    private fun logout() {
-        SessionService.getInstance(requireContext()).clear()
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-    }
-
-    private fun showError(msg: String) {
-        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
+	override fun onDestroyView() {
+		super.onDestroyView()
+		_binding = null
+	}
 }
