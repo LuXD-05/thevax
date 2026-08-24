@@ -23,11 +23,12 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        repo = UserRepository(this, DatabaseHelper(this))
+        val dbHelper = DatabaseHelper(this)
+        repo = UserRepository(this, dbHelper)
 
-        // If already logged, go directly to MainActivity
+        // If already logged, go directly to SplashScreen
         if (SessionService.getInstance(this).isLoggedIn()) {
-            startActivity(Intent(this, MainActivity::class.java))
+            startActivity(Intent(this, SplashScreen::class.java))
             finish()
             return
         }
