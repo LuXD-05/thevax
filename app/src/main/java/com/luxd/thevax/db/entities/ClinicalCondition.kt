@@ -1,7 +1,6 @@
 package com.luxd.thevax.db.entities
 
 data class ClinicalCondition(
-    val id: Long = 0,
-    val userId: Long,
+    val id: Int = 0,
     val conditionName: String,
 )
