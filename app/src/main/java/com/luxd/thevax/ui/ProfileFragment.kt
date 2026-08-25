@@ -17,7 +17,6 @@ import com.luxd.thevax.db.entities.Therapy
 import com.luxd.thevax.db.entities.User
 import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.services.SessionService
-import kotlin.toString
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -26,7 +25,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
 	private lateinit var dbHelper: DatabaseHelper
 	private lateinit var repo: UserRepository
-	private lateinit var currentUser: User
+	private var currentUser: User? = null
 
 	private var therapies = listOf<Therapy>()
 	private var conditions = listOf<ClinicalCondition>()
@@ -39,19 +38,25 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		// Inits
 		dbHelper = DatabaseHelper(requireContext())
 		repo = UserRepository(requireContext(), dbHelper)
-		// TODO: implementare (se non riesci faccio io) (e magari togliere getUserId() e sostituire con getUser().id dove serve)
+		
+		// Load user from session (hybrid approach: cache or DB load)
 		currentUser = SessionService.getInstance(requireContext()).getUser()
+
+		if (currentUser == null) {
+			logout()
+			return
+		}
 
 		// Get therapies
 		therapies = repo.getTherapies()
 
 		// Get all conditions + user's conditions
 		conditions = repo.getConditions()
-		userConditions = repo.getConditionsForUser(currentUser.id).toMutableList()
+		userConditions = repo.getConditionsForUser(currentUser!!.id).toMutableList() //TODO: ???
 
 		// Setup dropdown with therapies & conditions
 		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
-		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray() //TODO: dropdown?
+		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray()
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
 
@@ -61,17 +66,18 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
 		binding.btnLogout.setOnClickListener { logout() }
 
-		// Loads user data
 		loadData()
 	}
 
 	private fun loadData() {
-		// Setup user fields
-		binding.etFirstName.setText(currentUser.firstName)
-		binding.etLastName.setText(currentUser.lastName)
-		binding.etAge.setText(currentUser.age.toString())
+		val user = currentUser ?: return // TODO: ???
 
-		if (currentUser.sex == "F") {
+		// Setup user fields
+		binding.etFirstName.setText(user.firstName)
+		binding.etLastName.setText(user.lastName)
+		binding.etAge.setText(user.age.toString())
+
+		if (user.sex == "F") {
 			binding.rbMale.isChecked = false
 			binding.rbFemale.isChecked = true
 		} else {
@@ -79,15 +85,17 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 			binding.rbFemale.isChecked = false
 		}
 
-		val currentTherapyName = therapies.find { it.id == currentUser.therapyId }?.name ?: "Nessuna"
+		val currentTherapyName = therapies.find { it.id == user.therapyId }?.name ?: "Nessuna"
 		binding.autoCompleteTherapy.setText(currentTherapyName, false)
 
 		// Setup user's conditions
 		renderConditions()
 	}
 
-	// TODO: commentare (😢)
+    //Update the list of conditions showing them as Chip
 	private fun renderConditions() {
+
+        //Cleans existing chips before recreating them
 		binding.chipGroupConditions.removeAllViews()
 
 		for (condition in userConditions) {
@@ -95,23 +103,26 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 				text = condition.conditionName
 				isCloseIconVisible = true
 				setOnCloseIconClickListener {
-					// Remove condition
-					userConditions = (userConditions - condition).toMutableList()
+					userConditions.remove(condition)
 				}
 			}
+
+            // Adds the Chip to the conditions group
 			binding.chipGroupConditions.addView(chip)
 		}
 
+		// TODO: Selectable conditions
+        // Show the message if there are no conditions, otherwise hide it
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
 	}
 
 	private fun saveProfile() {
-		// Get user data from DTO
+		val user = currentUser ?: return
+
 		val firstName = binding.etFirstName.text.toString().trim()
 		val lastName = binding.etLastName.text.toString().trim()
 		val ageStr = binding.etAge.text.toString()
 		val sex = if (binding.rbFemale.isChecked) "F" else "M"
-		// TODO: aggiungere et x email e password in fragment_profile
 		val email = binding.etEmail.text.toString().trim()
 		val password = binding.etPassword.text.toString()
 
@@ -157,17 +168,16 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		if (repo.update(SessionService.getInstance(requireContext()).getUserId(), fields)) {
 			Snackbar.make(binding.root, "Profilo aggiornato", Snackbar.LENGTH_LONG).show()
 		} else {
-			showError("Errore: questa email è già registrata o non è stato possibile salvare i dati.")
+			showError("Errore durante il salvataggio.")
 		}
 	}
 
-	// TODO: impedire crazione di nuove conditions (solo dropdown da cui si selezionano conditions statiche dal db)
-	// DINA ALERT! gemini ha rifatto sto metodo, debuggalo e vedi cosa fa (p.s. lo ho gia modificato io un po meglio, dovrebbe essere a posto)
+	// TODO: impedire creazione di nuove conditions (solo dropdown da cui si selezionano conditions statiche dal db), controllare tutto ok, già modificato da lucix
 	private fun showAddConditionDialog() {
 		// Filter conditions not already added
 		val selectableConditions = conditions.filter { it.id !in userConditions.map { uc -> uc.id }.toSet() }
 
-		// TODO: non necessario? far apparire texttview fissa con "nessuna condizione disponibile" o non far apparire niente?
+		// TODO: far apparire ma non tramite snackbar, più pulito nel popup che si apre per l'aggiunta delle condizioni cliniche
 		// (che poi tale textview dovrebbe esserci gia che mi pare di averla vista)
 		if (selectableConditions.isEmpty()) {
 			Snackbar.make(binding.root, "Nessuna nuova condizione disponibile", Snackbar.LENGTH_SHORT).show()
@@ -179,8 +189,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 			.setTitle(getString(R.string.add_condition))
 			.setItems(selectableConditions.map { it.conditionName }.toTypedArray()) { _, which ->
 				val selected = selectableConditions[which]
-				// Adds contition
-				userConditions = (userConditions + selected).toMutableList()
+				userConditions.add(selected)
 			}
 			.setNegativeButton(getString(R.string.cancel), null)
 			.show()
@@ -195,6 +204,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		startActivity(intent)
 	}
 
+    //Show error if something goes wrong during the saveProfile
 	private fun showError(msg: String) {
 		Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
 	}

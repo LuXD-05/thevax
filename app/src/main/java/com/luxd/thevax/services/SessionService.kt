@@ -2,6 +2,9 @@ package com.luxd.thevax.services
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.luxd.thevax.db.entities.User
+import com.luxd.thevax.db.repositories.UserRepository
+import com.luxd.thevax.db.DatabaseHelper
 
 class SessionService(context: Context) {
 
@@ -9,12 +12,33 @@ class SessionService(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("thevax_session", Context.MODE_PRIVATE)
 
+    // Memory cache for the current user
+    private var _user: User? = null
+
+    private var repo: UserRepository = UserRepository(context, DatabaseHelper(context))
+
     /**
-     * Saves the passed userId in the prefs
-     * @param id the id of the user
+     * Saves the user in memory cache and the ID in persistent storage
+     * @param user the user object
      */
-    fun saveUserId(id: Int) {
-        prefs.edit().putInt(KEY_USER_ID, id).apply()
+    fun saveUser(user: User) {
+        _user = user
+        prefs.edit().putInt(KEY_USER_ID, user.id).apply()
+    }
+
+    /**
+     * Gets the current user. Returns from cache if available, 
+     * otherwise loads from DB using the saved ID.
+     * @return the current User or null if not logged in
+     */
+    fun getUser(): User? {
+        if (_user != null) return _user
+
+        val userId = getUserId()
+        if (userId != -1) {
+            _user = repo.getUserById(userId)
+        }
+        return _user
     }
 
     /**
@@ -34,9 +58,10 @@ class SessionService(context: Context) {
     }
 
     /**
-     * Clears the prefs
+     * Clears the prefs and memory cache
      */
     fun clear() {
+        _user = null
         prefs.edit().clear().apply()
     }
 
