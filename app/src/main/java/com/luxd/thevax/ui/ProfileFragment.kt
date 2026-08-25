@@ -23,41 +23,31 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	private var _binding: FragmentProfileBinding? = null
 	private val binding get() = _binding!!
 
-	private lateinit var dbHelper: DatabaseHelper
-	private lateinit var repo: UserRepository
-	private var currentUser: User? = null
+	private val db by lazy { DatabaseHelper(requireContext()) }
+	private val repo by lazy { UserRepository(db) }
 
 	private var therapies = listOf<Therapy>()
 	private var conditions = listOf<ClinicalCondition>()
 	private var userConditions = mutableListOf<ClinicalCondition>()
+	private var currentUser: User? = null
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		_binding = FragmentProfileBinding.bind(view)
 
-		// Inits
-		dbHelper = DatabaseHelper(requireContext())
-		repo = UserRepository(requireContext(), dbHelper)
-		
-		// Load user from session (hybrid approach: cache or DB load)
-		currentUser = SessionService.getInstance(requireContext()).getUser()
+		// Load user from session (cache or DB)
+		currentUser = SessionService.getInstance().getUser() ?: return logout()
 
-		if (currentUser == null) {
-			logout()
-			return
-		}
-
-		// Get therapies
+		// Get therapies + conditions
 		therapies = repo.getTherapies()
-
-		// Get all conditions + user's conditions
 		conditions = repo.getConditions()
-		userConditions = repo.getConditionsForUser(currentUser!!.id).toMutableList() //TODO: ???
+		userConditions = repo.getConditionsForUser(currentUser!!.id).toMutableList()
 
-		// Setup dropdown with therapies & conditions
+		// Setup dropdown with therapies
 		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
-		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray()
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
+		// TODO:
+		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray()
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
 
 		// HANDLERS
@@ -70,7 +60,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	}
 
 	private fun loadData() {
-		val user = currentUser ?: return // TODO: ???
+		val user = currentUser ?: return // TODO: ??? (non un problema x ora)
 
 		// Setup user fields
 		binding.etFirstName.setText(user.firstName)
@@ -111,8 +101,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 			binding.chipGroupConditions.addView(chip)
 		}
 
-		// TODO: Selectable conditions
-        // Show the message if there are no conditions, otherwise hide it
+        // Shows message if no conditions SELECTED
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
 	}
 
@@ -165,14 +154,13 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		fields["conditions"] = userConditions.toList()
 
 		// Updates the user in db
-		if (repo.update(SessionService.getInstance(requireContext()).getUserId(), fields)) {
+		if (repo.update(user.id, fields)) {
 			Snackbar.make(binding.root, "Profilo aggiornato", Snackbar.LENGTH_LONG).show()
 		} else {
 			showError("Errore durante il salvataggio.")
 		}
 	}
 
-	// TODO: impedire creazione di nuove conditions (solo dropdown da cui si selezionano conditions statiche dal db), controllare tutto ok, già modificato da lucix
 	private fun showAddConditionDialog() {
 		// Filter conditions not already added
 		val selectableConditions = conditions.filter { it.id !in userConditions.map { uc -> uc.id }.toSet() }
@@ -188,8 +176,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		AlertDialog.Builder(requireContext())
 			.setTitle(getString(R.string.add_condition))
 			.setItems(selectableConditions.map { it.conditionName }.toTypedArray()) { _, which ->
-				val selected = selectableConditions[which]
-				userConditions.add(selected)
+				userConditions.add(selectableConditions[which])
+				//renderConditions();
 			}
 			.setNegativeButton(getString(R.string.cancel), null)
 			.show()
@@ -197,7 +185,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
 	private fun logout() {
 		// Clears user in session
-		SessionService.getInstance(requireContext()).clear()
+		SessionService.getInstance().clear()
 		// Goes to login + clear backStack
 		val intent = Intent(requireContext(), LoginActivity::class.java)
 		intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
