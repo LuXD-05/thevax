@@ -1,40 +1,99 @@
 package com.luxd.thevax.db.DAOs
 
-import android.content.ContentValues
-import android.database.Cursor
 import com.luxd.thevax.db.entities.ClinicalCondition
 import android.database.sqlite.SQLiteDatabase
 
 class ClinicalConditionDAO(private val db: SQLiteDatabase) {
 
     /**
-     * Adds a clinical condition to an user
+     * Updates a user's clinical conditions
      * @param userId the id of the user
-     * @param clinicalCondition the condition to add
-     * @return the id of the user_condition link
+     * @param conditionIds the ids of the conditions to set for the user
+     * @return true if the update was successful, false otherwise
      */
-    fun addForUser(userId: Int, clinicalCondition: ClinicalCondition): Long {
-        // 1. Find or create condition
-        var conditionId = getConditionId(clinicalCondition.conditionName)
-        if (conditionId == -1L) {
-            val cv = ContentValues().apply {
-                put("name", clinicalCondition.conditionName)
+    fun updateForUser(userId: Int, conditionIds: List<Int>): Boolean {
+        var success = true
+
+        db.beginTransaction()
+
+        try {
+            // Deletes all previous user's conditions
+            db.delete("user_conditions", "user_id = ?", arrayOf(userId.toString()))
+
+            // Insert if list not empty
+            if (!conditionIds.isNullOrEmpty()) {
+                // Dynamically builds the query & parameters from fieldsToUpdate with placeholders
+                val valuesPlaceholders = conditionIds.joinToString(", ") { "(?, ?)" }
+                val sql = "INSERT INTO user_conditions (user_id, condition_id) VALUES $valuesPlaceholders"
+
+                // Builds the flat list of args
+                val args = mutableListOf<String>()
+                conditionIds.forEach { ccId ->
+                    args.add(userId.toString())
+                    args.add(ccId.toString())
+                }
+
+                // Executes query
+                db.execSQL(sql, args.toTypedArray())
             }
-            conditionId = db.insert("conditions", null, cv)
+
+            db.setTransactionSuccessful()
+
+        } catch (e: Exception) {
+            success = false
+        } finally {
+            db.endTransaction()
         }
 
-        // 2. Link user to condition
-        val cvLink = ContentValues().apply {
-            put("user_id", userId)
-            put("condition_id", conditionId)
-        }
-        return db.insert("user_conditions", null, cvLink)
+        return success
     }
 
-    private fun getConditionId(name: String): Long {
-        val cursor = db.rawQuery("SELECT id FROM conditions WHERE name = ? LIMIT 1", arrayOf(name))
-        return cursor.use {
-            if (it.moveToFirst()) it.getLong(0) else -1L
+    /**
+     * Gets all available conditions in the system
+     * @return the list of clinical conditions
+     */
+    fun getAll(): List<ClinicalCondition> {
+        val cursor = db.rawQuery("SELECT * FROM conditions ORDER BY name ASC", null)
+        val conditions = mutableListOf<ClinicalCondition>()
+        cursor.use {
+            while (it.moveToNext()) {
+                conditions.add(
+                    ClinicalCondition(
+                        id = it.getInt(it.getColumnIndexOrThrow("id")),
+                        conditionName = it.getString(it.getColumnIndexOrThrow("name"))
+                    )
+                )
+            }
         }
+        return conditions
+    }
+
+    /**
+     * Gets all conditions for a specific user
+     * @param userId the id of the user
+     * @return the list of clinical conditions
+     */
+    fun getConditionsForUser(userId: Int): List<ClinicalCondition> {
+        val query = """
+            SELECT c.id, c.name 
+            FROM conditions c
+            JOIN user_conditions uc ON c.id = uc.condition_id
+            WHERE uc.user_id = ?
+        """.trimIndent()
+
+        val cursor = db.rawQuery(query, arrayOf(userId.toString()))
+        val conditions = mutableListOf<ClinicalCondition>()
+
+        cursor.use {
+            while (it.moveToNext()) {
+                conditions.add(
+                    ClinicalCondition(
+                        id = it.getInt(it.getColumnIndexOrThrow("id")),
+                        conditionName = it.getString(it.getColumnIndexOrThrow("name"))
+                    )
+                )
+            }
+        }
+        return conditions
     }
 }

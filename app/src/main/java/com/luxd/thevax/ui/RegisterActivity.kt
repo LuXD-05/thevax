@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
@@ -27,9 +26,9 @@ class RegisterActivity : AppCompatActivity() {
 
 	private lateinit var binding: ActivityRegisterBinding
 
-	private lateinit var dbHelper: DatabaseHelper
-	private lateinit var repo: UserRepository
-	private lateinit var therapyDAO: TherapyDAO
+	private val db by lazy { DatabaseHelper(this) }
+	private val repo by lazy { UserRepository(db) }
+	private val therapyDAO by lazy { TherapyDAO(db.writableDatabase) }
 
 	private val conditions = mutableListOf<ClinicalCondition>()
 	private var therapies = listOf<Therapy>()
@@ -37,11 +36,6 @@ class RegisterActivity : AppCompatActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
-
-		// Inits
-		dbHelper = DatabaseHelper(this)
-		repo = UserRepository(this, dbHelper)
-		therapyDAO = TherapyDAO(dbHelper.readableDatabase) // TODO: make in repo?
 
 		binding = ActivityRegisterBinding.inflate(layoutInflater)
 		setContentView(binding.root)

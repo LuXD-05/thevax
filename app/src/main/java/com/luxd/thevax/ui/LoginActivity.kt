@@ -17,17 +17,15 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-    private lateinit var repo: UserRepository
+    private val db by lazy { DatabaseHelper(this) }
+    private val repo by lazy { UserRepository(db) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val dbHelper = DatabaseHelper(this)
-        repo = UserRepository(this, dbHelper)
-
         // If already logged, go directly to SplashScreen
-        if (SessionService.getInstance(this).isLoggedIn()) {
+        if (SessionService.getInstance().isLoggedIn()) {
             startActivity(Intent(this, SplashScreen::class.java))
             finish()
             return

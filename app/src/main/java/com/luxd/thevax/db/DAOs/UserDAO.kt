@@ -28,7 +28,7 @@ class UserDAO(private val db: SQLiteDatabase) {
     }
 
     /**
-     * Updates an user
+     * Updates a user
      * @param id the id of the user
      * @param fieldsToUpdate a map of the fields to update
      * @return true if the user was updated, false otherwise
@@ -46,7 +46,7 @@ class UserDAO(private val db: SQLiteDatabase) {
             db.execSQL(sql, args)
             true
         } catch (e: Exception) {
-            // TODO: (build &) return error message?
+            // TODO: (build &) return error message? (done in repos?)
             false
         }
     }

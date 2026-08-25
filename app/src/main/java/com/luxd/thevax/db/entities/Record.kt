@@ -5,6 +5,6 @@ data class Record(
 	val userId: Int,
 	val vaccineId: Int,
 	val status: String,
-	val date: Int,
+	val date: Long,
 	val notes: String?
 )

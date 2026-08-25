@@ -1,6 +1,5 @@
 package com.luxd.thevax.db.DAOs
 
-import android.content.ContentValues
 import android.database.Cursor
 import com.luxd.thevax.db.entities.Therapy
 import android.database.sqlite.SQLiteDatabase
