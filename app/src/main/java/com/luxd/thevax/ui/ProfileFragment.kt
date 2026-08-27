@@ -66,6 +66,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		binding.etFirstName.setText(user.firstName)
 		binding.etLastName.setText(user.lastName)
 		binding.etAge.setText(user.age.toString())
+		binding.etEmail.setText(user.email)
 
 		if (user.sex == "F") {
 			binding.rbMale.isChecked = false

@@ -168,13 +168,6 @@
                         android:layout_marginEnd="16dp" />
                 </RadioGroup>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveProfile"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="@string/profile_save"
-                    app:cornerRadius="10dp" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -267,6 +260,13 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveProfile"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/profile_save"
+            app:cornerRadius="10dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"

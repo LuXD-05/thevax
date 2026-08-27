@@ -19,6 +19,7 @@ import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.DAOs.TherapyDAO
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.RegisterDTO
+import com.luxd.thevax.db.DAOs.ClinicalConditionDAO
 import com.luxd.thevax.db.entities.Therapy
 import com.luxd.thevax.db.repositories.UserRepository
 
@@ -28,8 +29,11 @@ class RegisterActivity : AppCompatActivity() {
 
 	private val db by lazy { DatabaseHelper(this) }
 	private val repo by lazy { UserRepository(db) }
-	private val therapyDAO by lazy { TherapyDAO(db.writableDatabase) }
 
+	private val therapyDAO by lazy { TherapyDAO(db.writableDatabase) }
+	private val conditionDAO by lazy { ClinicalConditionDAO(db.writableDatabase) }
+
+	private var availableConditions = listOf<ClinicalCondition>()
 	private val conditions = mutableListOf<ClinicalCondition>()
 	private var therapies = listOf<Therapy>()
 
@@ -46,12 +50,30 @@ class RegisterActivity : AppCompatActivity() {
 			insets
 		}
 
-		// Get therapies
+		// Get available therapies
 		therapies = therapyDAO.getAll()
+
+		// Get available Conditions
+		availableConditions = conditionDAO.getAll()
 
 		// Setup dropdown with therapies
 		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
+
+		// Setup dropdown with conditions
+		val dropdownConditions = availableConditions.map { it.conditionName }.toTypedArray()
+		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
+
+
+		// Setup multi-select dropdown for conditions
+		binding.autoCompleteConditions.setOnItemClickListener { _, _, position, _ ->
+			val selected = availableConditions[position]
+			if (conditions.none { it.id == selected.id }) {
+				conditions.add(selected)
+				renderConditions()
+			}
+			binding.autoCompleteConditions.setText("", false)
+		}
 
 		// HANDLERS
 
@@ -62,10 +84,6 @@ class RegisterActivity : AppCompatActivity() {
 		// Register button
 		binding.btnRegister.setOnClickListener {
 			register()
-		}
-		// Add condition button
-		binding.btnAddCondition.setOnClickListener {
-			showAddConditionDialog()
 		}
 	}
 
@@ -134,41 +152,6 @@ class RegisterActivity : AppCompatActivity() {
 		}
 	}
 
-	// TODO: creare metodo utility x dialog o usare fragment.push?
-	/**
-	 * Shows a dialog to add a new condition
-	 */
-	private fun showAddConditionDialog() {
-		val conditionName = EditText(this).apply {
-			hint = getString(R.string.condition_name)
-			inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-		}
-		val dialog = AlertDialog.Builder(this)
-			.setTitle(R.string.add_condition)
-			.setView(conditionName)
-			.setPositiveButton(R.string.add, null)
-			.setNegativeButton(R.string.cancel, null)
-			.create()
-
-		dialog.setOnShowListener {
-			dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-				val name = conditionName.text.toString().trim()
-				if (name.isBlank()) {
-					conditionName.error = getString(R.string.condition_name)
-					return@setOnClickListener
-				}
-				if (conditions.any { it.conditionName.equals(name, ignoreCase = true) }) {
-					conditionName.error = getString(R.string.condition_already_added)
-					return@setOnClickListener
-				}
-				conditions.add(ClinicalCondition(0, conditionName = name))
-				renderConditions()
-				dialog.dismiss()
-			}
-		}
-		dialog.show()
-	}
-
 	private fun renderConditions() {
 		binding.chipGroupConditions.removeAllViews()
 		conditions.forEach { condition ->
@@ -182,6 +165,7 @@ class RegisterActivity : AppCompatActivity() {
 			}
 			binding.chipGroupConditions.addView(chip)
 		}
+		binding.chipGroupConditions.visibility = if (conditions.isEmpty()) View.GONE else View.VISIBLE
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
 	}
 
