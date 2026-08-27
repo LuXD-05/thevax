@@ -17,6 +17,27 @@ class TherapyDAO(private val db: SQLiteDatabase) {
         return therapies
     }
 
+    /**
+     * Gets a user's selected therapy
+     * @param userId the id of the user
+     * @return the user's selected therapy if found, "Nessuna" otherwise
+     */
+    fun getTherapyForUser(userId: Int): Therapy {
+        val query = """
+            SELECT t.* 
+            FROM therapies t 
+            JOIN users u ON t.id = u.therapy_id 
+            WHERE u.id = ?
+        """.trimIndent()
+
+        val cursor = db.rawQuery(query, arrayOf(userId.toString()))
+
+        return cursor.use {
+            if (it.moveToFirst()) it.toTherapy()
+            else Therapy(0, "Nessuna", null)
+        }
+    }
+
     fun findById(id: Int): Therapy? {
         val cursor = db.rawQuery("SELECT * FROM therapies WHERE id = ?", arrayOf(id.toString()))
         return cursor.use {

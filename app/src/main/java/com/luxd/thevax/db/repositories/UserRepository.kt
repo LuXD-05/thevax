@@ -168,6 +168,15 @@ class UserRepository(db: DatabaseHelper) {
 	}
 
 	/**
+	 * Gets a specific user's selected therapy
+	 * @param userId the id of the user
+	 * @return the user's selected therapy if found, "Nessuna" otherwise
+	 */
+	fun getTherapyForUser(userId: Int): Therapy {
+		return therapyDAO.getTherapyForUser(userId)
+	}
+
+	/**
 	 * Gets all conditions for a specific user
 	 * @param userId the id of the user
 	 * @return the list of clinical conditions
