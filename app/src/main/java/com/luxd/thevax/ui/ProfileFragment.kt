@@ -129,7 +129,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 			showError("Inserisci un'email valida.")
 			return
 		}
-		if (password.length < 8) {
+		if (!password.isBlank() && password.length < 8) {
 			showError("La password deve avere almeno 8 caratteri.")
 			return
 		}
