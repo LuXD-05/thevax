@@ -6,4 +6,4 @@ data class Vaccine(
     val vaccineType: String,
     val minAge: Int?,
     val maxAge: Int?
-)
+) : java.io.Serializable
