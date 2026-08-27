@@ -121,7 +121,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		val selectedTherapyId = therapies.find { it.name == selectedTherapyText }?.id
 
 		// Validates fields
-		if (email.isBlank() || password.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank()) {
+		if (email.isBlank() || firstName.isBlank() || lastName.isBlank() || ageStr.isBlank()) {
 			showError("Tutti i campi sono obbligatori.")
 			return
 		}

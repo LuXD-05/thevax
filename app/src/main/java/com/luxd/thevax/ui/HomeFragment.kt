@@ -42,7 +42,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         // Update header card
         binding.tvName.text = "${currentUser.firstName} ${currentUser.lastName}"
         binding.tvAge.text = "Età: ${currentUser.age} | Sesso: ${currentUser.sex}"
-        binding.tvTherapies.text = "Terapia: $userTherapy.name"
+        binding.tvTherapies.text = "Terapia: ${userTherapy?.name ?: "Nessuna"}"
 
         // Fetch vaccines evaluations for user
         val evaluations = vaccineRepo.evaluateVaccinesForUser(currentUser, userConditions)
