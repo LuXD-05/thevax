@@ -27,6 +27,7 @@
     <string name="cancel">Annulla</string>
     <string name="logout">Logout</string>
     <string name="none">Nessuna</string>
+    <string name="vaccine_plan">PIANO CONSIGLIATO</string>
     <string name="profile_patient_data">Dati del paziente</string>
     <string name="profile_first_name">Nome</string>
     <string name="profile_last_name">Cognome</string>
@@ -36,7 +37,7 @@
     <string name="profile_sex">Sesso</string>
     <string name="sex_male">M</string>
     <string name="sex_female">F</string>
-    <string name="profile_save">Salva dati</string>
+    <string name="profile_save">Salva</string>
     <string name="profile_therapy">Terapia biologica</string>
     <string name="profile_conditions">Condizioni cliniche</string>
     <string name="profile_add_condition">+ Aggiungi</string>

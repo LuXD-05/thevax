@@ -26,9 +26,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	private val db by lazy { DatabaseHelper(requireContext()) }
 	private val repo by lazy { UserRepository(db) }
 
+	private var availableConditions = listOf<ClinicalCondition>()
+	private val conditions = mutableListOf<ClinicalCondition>()
 	private var therapies = listOf<Therapy>()
-	private var conditions = listOf<ClinicalCondition>()
-	private var userConditions = mutableListOf<ClinicalCondition>()
+
 	private var currentUser: User? = null
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -40,20 +41,34 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
 		// Get therapies + conditions
 		therapies = repo.getTherapies()
-		conditions = repo.getConditions()
-		userConditions = repo.getConditionsForUser(currentUser!!.id).toMutableList()
+		availableConditions = repo.getConditions()
+		
+		// Load existing user conditions
+		conditions.clear()
+		conditions.addAll(repo.getConditionsForUser(currentUser!!.id))
 
 		// Setup dropdown with therapies
 		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
 		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
-		// TODO:
-		val dropdownConditions = conditions.map { it.conditionName }.toTypedArray()
-		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
+
+		// Setup dropdown with conditions
+		val dropdownConditions = availableConditions.map { it.conditionName }.toTypedArray()
+		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
+
+
+		// Setup multi-select dropdown for conditions
+		binding.autoCompleteConditions.setOnItemClickListener { _, _, position, _ ->
+			val selected = availableConditions[position]
+			if (conditions.none { it.id == selected.id }) {
+				conditions.add(selected)
+				renderConditions()
+			}
+			binding.autoCompleteConditions.setText("", false)
+		}
 
 		// HANDLERS
 
 		binding.btnSaveProfile.setOnClickListener { saveProfile() }
-		binding.btnAddCondition.setOnClickListener { showAddConditionDialog() }
 		binding.btnLogout.setOnClickListener { logout() }
 
 		loadData()
@@ -85,24 +100,19 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     //Update the list of conditions showing them as Chip
 	private fun renderConditions() {
-
-        //Cleans existing chips before recreating them
 		binding.chipGroupConditions.removeAllViews()
-
-		for (condition in userConditions) {
+		conditions.forEach { condition ->
 			val chip = Chip(requireContext()).apply {
 				text = condition.conditionName
 				isCloseIconVisible = true
 				setOnCloseIconClickListener {
-					userConditions.remove(condition)
+					conditions.remove(condition)
+					renderConditions()
 				}
 			}
-
-            // Adds the Chip to the conditions group
 			binding.chipGroupConditions.addView(chip)
 		}
-
-        // Shows message if no conditions SELECTED
+		binding.chipGroupConditions.visibility = if (conditions.isEmpty()) View.GONE else View.VISIBLE
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
 	}
 
@@ -152,7 +162,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		fields["email"] = email
 		fields["password"] = password
 		fields["therapy_id"] = selectedTherapyId
-		fields["conditions"] = userConditions.toList()
+		fields["conditions"] = conditions.toList()
 
 		// Updates the user in db
 		if (repo.update(user.id, fields)) {
@@ -160,28 +170,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		} else {
 			showError("Errore durante il salvataggio.")
 		}
-	}
-
-	private fun showAddConditionDialog() {
-		// Filter conditions not already added
-		val selectableConditions = conditions.filter { it.id !in userConditions.map { uc -> uc.id }.toSet() }
-
-		// TODO: far apparire ma non tramite snackbar, più pulito nel popup che si apre per l'aggiunta delle condizioni cliniche
-		// (che poi tale textview dovrebbe esserci gia che mi pare di averla vista)
-		if (selectableConditions.isEmpty()) {
-			Snackbar.make(binding.root, "Nessuna nuova condizione disponibile", Snackbar.LENGTH_SHORT).show()
-			return
-		}
-
-		// Shows conditions dialog
-		AlertDialog.Builder(requireContext())
-			.setTitle(getString(R.string.add_condition))
-			.setItems(selectableConditions.map { it.conditionName }.toTypedArray()) { _, which ->
-				userConditions.add(selectableConditions[which])
-				//renderConditions();
-			}
-			.setNegativeButton(getString(R.string.cancel), null)
-			.show()
 	}
 
 	private fun logout() {

@@ -54,6 +54,16 @@
                 android:alpha="0.8"
                 android:layout_marginTop="6dp" />
 
+            <TextView
+                android:id="@+id/tvConditions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Condizioni: Nessuna"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnPrimary"
+                android:alpha="0.8"
+                android:layout_marginTop="4dp" />
+
             <!-- Divisore interno -->
             <View
                 android:layout_width="match_parent"
@@ -165,7 +175,7 @@
         android:id="@+id/tvSectionTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Piano Vaccinale Consigliato"
+        android:text="@string/vaccine_plan"
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurfaceVariant"

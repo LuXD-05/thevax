@@ -216,49 +216,37 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
+                    android:hint="@string/conditions">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteConditions"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/profile_conditions"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary" />
+                        android:inputType="none" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddCondition"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/profile_add_condition"
-                        android:textSize="12sp"
-                        app:cornerRadius="8dp"
-                        tools:ignore="TouchTargetSizeCheck" />
-                </LinearLayout>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
                     android:id="@+id/tvNoConditions"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:text="@string/profile_no_conditions"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    android:gravity="center"
-                    android:paddingVertical="8dp" />
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chipGroupConditions"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
 
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton

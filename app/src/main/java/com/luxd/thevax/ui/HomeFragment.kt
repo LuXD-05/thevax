@@ -43,6 +43,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         binding.tvName.text = "${currentUser.firstName} ${currentUser.lastName}"
         binding.tvAge.text = "Età: ${currentUser.age} | Sesso: ${currentUser.sex}"
         binding.tvTherapies.text = "Terapia: ${userTherapy?.name ?: "Nessuna"}"
+        
+        val conditionsText = if (userConditions.isEmpty()) "Nessuna" else userConditions.joinToString(", ") { it.conditionName }
+        binding.tvConditions.text = "Condizioni: $conditionsText"
 
         // Fetch vaccines evaluations for user
         val evaluations = vaccineRepo.evaluateVaccinesForUser(currentUser, userConditions)
