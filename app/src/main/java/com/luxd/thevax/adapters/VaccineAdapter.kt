@@ -1,9 +1,10 @@
 package com.luxd.thevax.adapters
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.luxd.thevax.R
 import com.luxd.thevax.databinding.ItemVaccineBinding
 import com.luxd.thevax.db.entities.Vaccine
 
@@ -27,12 +28,13 @@ class VaccineAdapter(
 		holder.binding.tvVaccineType.text = vaccine.vaccineType
 
 		// Sets status label + color based on the evaluation
-		val (label, color) = when (status) {
-			"recommended" -> "Raccomandato" to Color.parseColor("#2E7D32")
-			"contraindicated" -> "Controindicato" to Color.parseColor("#C62828")
-			else -> "Opzionale" to Color.parseColor("#EF6C00")
+		val (label, colorRes) = when (status) {
+			"recommended" -> "Raccomandato" to R.color.status_recommended
+			"contraindicated" -> "Controindicato" to R.color.status_contraindicated
+			else -> "Opzionale" to R.color.status_optional
 		}
 		holder.binding.tvStatus.text = label
+		val color = ContextCompat.getColor(holder.binding.root.context, colorRes)
 		holder.binding.tvStatus.setTextColor(color)
 
 		// Item click handler

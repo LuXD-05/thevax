@@ -32,7 +32,7 @@
                 android:text="Caricamento..."
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF" />
+                android:textColor="?attr/colorOnPrimary" />
 
             <TextView
                 android:id="@+id/tvAge"
@@ -40,7 +40,8 @@
                 android:layout_height="wrap_content"
                 android:text="Età: -- | Sesso: --"
                 android:textSize="14sp"
-                android:textColor="#BBDEFB"
+                android:textColor="?attr/colorOnPrimary"
+                android:alpha="0.8"
                 android:layout_marginTop="4dp" />
 
             <TextView
@@ -49,14 +50,16 @@
                 android:layout_height="wrap_content"
                 android:text="Terapia: Nessuna"
                 android:textSize="13sp"
-                android:textColor="#BBDEFB"
+                android:textColor="?attr/colorOnPrimary"
+                android:alpha="0.8"
                 android:layout_marginTop="6dp" />
 
             <!-- Divisore interno -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#42A5F5"
+                android:background="?attr/colorOnPrimary"
+                android:alpha="0.2"
                 android:layout_marginVertical="16dp" />
 
             <!-- Contatori di stato vaccini -->
@@ -80,20 +83,22 @@
                         android:text="0"
                         android:textSize="26sp"
                         android:textStyle="bold"
-                        android:textColor="#A5D6A7" />
+                        android:textColor="@color/status_recommended" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Raccomandati"
                         android:textSize="11sp"
-                        android:textColor="#BBDEFB"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:alpha="0.8"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="1dp"
                     android:layout_height="32dp"
-                    android:background="#5C9DD4" />
+                    android:background="?attr/colorOnPrimary"
+                    android:alpha="0.2" />
 
                 <!-- Opzionali -->
                 <LinearLayout
@@ -109,20 +114,22 @@
                         android:text="0"
                         android:textSize="26sp"
                         android:textStyle="bold"
-                        android:textColor="#FFCC80" />
+                        android:textColor="@color/status_optional" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Opzionali"
                         android:textSize="11sp"
-                        android:textColor="#BBDEFB"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:alpha="0.8"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="1dp"
                     android:layout_height="32dp"
-                    android:background="#5C9DD4" />
+                    android:background="?attr/colorOnPrimary"
+                    android:alpha="0.2" />
 
                 <!-- Controindicati -->
                 <LinearLayout
@@ -138,13 +145,14 @@
                         android:text="0"
                         android:textSize="26sp"
                         android:textStyle="bold"
-                        android:textColor="#EF9A9A" />
+                        android:textColor="@color/status_contraindicated" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Controindicati"
                         android:textSize="11sp"
-                        android:textColor="#BBDEFB"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:alpha="0.8"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -160,7 +168,7 @@
         android:text="Piano Vaccinale Consigliato"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="#333333"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginStart="20dp"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/cardHeader"
