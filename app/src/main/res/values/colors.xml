@@ -14,6 +14,12 @@
     <color name="on_surface">#111827</color>
     <color name="text_secondary">#4B5563</color>
     <color name="divider">#E5E7EB</color>
+    <color name="ic_launcher_background">#E0F8FA</color>
+
+    <!-- Status Colors -->
+    <color name="status_recommended">#2E7D32</color>
+    <color name="status_optional">#EF6C00</color>
+    <color name="status_contraindicated">#C62828</color>
 
     <!-- Material 3 Light Palette -->
     <color name="md_theme_light_primary">#1E40AF</color>
@@ -28,6 +34,7 @@
     <color name="md_theme_light_onBackground">#111827</color>
     <color name="md_theme_light_surface">#FFFFFF</color>
     <color name="md_theme_light_onSurface">#111827</color>
+    <color name="md_theme_light_onSurfaceVariant">#4B5563</color>
 
     <!-- Material 3 Dark Palette (Base Declarations) -->
     <color name="md_theme_dark_primary">#93C5FD</color>
@@ -42,4 +49,5 @@
     <color name="md_theme_dark_onBackground">#F1F5F9</color>
     <color name="md_theme_dark_surface">#1E293B</color>
     <color name="md_theme_dark_onSurface">#F1F5F9</color>
+    <color name="md_theme_dark_onSurfaceVariant">#94A3B8</color>
 </resources>
