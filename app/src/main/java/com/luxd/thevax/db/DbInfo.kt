@@ -32,6 +32,7 @@ object DbInfo {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             therapy_id INTEGER NOT NULL,
             vaccine_id INTEGER NOT NULL,
+            recommendation_status TEXT,
             FOREIGN KEY (therapy_id) REFERENCES therapies(id) ON UPDATE CASCADE ON DELETE CASCADE,
             FOREIGN KEY (vaccine_id) REFERENCES vaccines(id) ON UPDATE CASCADE ON DELETE CASCADE
         );
@@ -138,5 +139,128 @@ object DbInfo {
         db.execSQL("DROP TABLE IF EXISTS users")
         db.execSQL("DROP TABLE IF EXISTS therapies")
     }
+
+    /**
+     * Seeds all tables with initial data
+     */
+    fun seedDB(db: SQLiteDatabase) {
+        db.execSQL(SEED_THERAPIES)
+        db.execSQL(SEED_CONDITIONS)
+        db.execSQL(SEED_VACCINES)
+        db.execSQL(SEED_THERAPY_VACCINES)
+        db.execSQL(SEED_VACCINE_CONDITIONS)
+    }
+
+    // SEEDS
+
+    private const val SEED_THERAPIES = """
+    INSERT INTO therapies (name, description) VALUES
+        ('Anti-TNF', 'Inibitori del TNF-alfa (es. Adalimumab, Etanercept, Infliximab). Aumentano il rischio di infezioni batteriche e tubercolosi. I vaccini vivi attenuati sono controindicati.'),
+        ('Anti-IL17', 'Inibitori dell''interleuchina-17 (es. Secukinumab, Ixekizumab). Usati in psoriasi e artrite psoriasica. Vaccini inattivati sicuri, vivi attenuati da evitare.'),
+        ('Anti-IL23', 'Inibitori dell''interleuchina-23 (es. Guselkumab, Risankizumab). Target piu'' selettivo, immunosoppressione generalmente meno marcata.'),
+        ('Anti-IL12/23', 'Inibitori combinati IL-12/23 (es. Ustekinumab). Modulazione della via Th1/Th17.'),
+        ('Anti-CD20', 'Depletenti i linfociti B (es. Rituximab). Riduzione della risposta anticorpale ai vaccini; vaccinare prima della somministrazione quando possibile.'),
+        ('Altri immunosoppressori', 'Farmaci immunomodulatori sistemici (es. Metotrexato, Ciclosporina, corticosteroidi ad alte dosi a lungo termine).');
+    """
+
+    private const val SEED_CONDITIONS = """
+    INSERT INTO conditions (name) VALUES
+        ('Diabete mellito'),
+        ('Malattia polmonare cronica'),
+        ('Cardiopatia cronica'),
+        ('Epatopatia cronica'),
+        ('Insufficienza renale cronica'),
+        ('Asplenia anatomica o funzionale'),
+        ('Immunodeficienza congenita o acquisita'),
+        ('Infezione da HIV'),
+        ('Neoplasia attiva'),
+        ('Trapianto d''organo solido'),
+        ('Trapianto di midollo osseo'),
+        ('Terapia immunosoppressiva a lungo termine'),
+        ('Deficit del complemento'),
+        ('Emoglobinopatia (talassemia, anemia falciforme)');
+    """
+
+    private const val SEED_VACCINES = """
+    INSERT INTO vaccines (name, vaccine_type, min_age, max_age) VALUES
+        ('Influenza stagionale (quadrivalente inattivata)', 'inattivato', 6, NULL),
+        ('Pneumococco (PCV20 / PCV15 + PPSV23)', 'coniugato', 18, NULL),
+        ('Epatite B (Engerix-B / Recombivax HB)', 'ricombinante', 0, NULL),
+        ('Epatite A (Harvix / Vaqta)', 'inattivato', 12, NULL),
+        ('MPR (Morbillo-Parotite-Rosolia)', 'vivo attenuato', 12, NULL),
+        ('Varicella (Varivax)', 'vivo attenuato', 12, NULL),
+        ('Herpes Zoster ricombinante adiuvato (Shingrix/RZV)', 'ricombinante', 18, NULL),
+        ('Herpes Zoster vivo attenuato (Zostavax/ZVL)', 'vivo attenuato', 50, NULL),
+        ('HPV (Gardasil 9)', 'ricombinante', 9, 45),
+        ('Meningococco ACWY (Menveo)', 'coniugato', 2, NULL),
+        ('Meningococco B (Bexsero / Trumenba)', 'ricombinante', 10, NULL),
+        ('Haemophilus influenzae tipo b (Hib)', 'coniugato', 2, NULL),
+        ('Difterite-Tetano-Pertosse (dTpa)', 'toxoide/inattivato', 7, NULL),
+        ('COVID-19 (mRNA / proteina Spike)', 'mRNA/ricombinante', 6, NULL),
+        ('Rotavirus', 'vivo attenuato', 6, 32),
+        ('Febbre tifoide', 'inattivato', 2, NULL),
+        ('TBE (encefalite da zecca)', 'inattivato', 1, NULL);
+    """
+
+    // Check results in view
+    private const val SEED_THERAPY_VACCINES = """
+        INSERT INTO therapy_vaccines (therapy_id, vaccine_id, recommendation_status) VALUES
+            -- Vaccini NON vivi raccomandati a chiunque sia in terapia biologica
+            -- 1=Influenza, 2=Pneumococco, 7=Zoster ricombinante (RZV), 14=COVID-19
+            (1, 1, 'recommended'), (1, 2, 'recommended'), (1, 7, 'recommended'), (1, 14, 'recommended'),
+            (2, 1, 'recommended'), (2, 2, 'recommended'), (2, 7, 'recommended'), (2, 14, 'recommended'),
+            (3, 1, 'recommended'), (3, 2, 'recommended'), (3, 7, 'recommended'), (3, 14, 'recommended'),
+            (4, 1, 'recommended'), (4, 2, 'recommended'), (4, 7, 'recommended'), (4, 14, 'recommended'),
+            (5, 1, 'recommended'), (5, 2, 'recommended'), (5, 14, 'recommended'),
+            (6, 1, 'recommended'), (6, 2, 'recommended'), (6, 7, 'recommended'), (6, 14, 'recommended'),
+            -- Vaccini VIVI attenuati: controindicati sotto immunosoppressione (EULAR, CDC)
+            -- 5=MPR, 6=Varicella, 8=Zoster vivo (ZVL), 15=Rotavirus
+            (1, 5, 'contraindicated'), (1, 6, 'contraindicated'), (1, 8, 'contraindicated'), (1, 15, 'contraindicated'),
+            (2, 5, 'contraindicated'), (2, 6, 'contraindicated'), (2, 8, 'contraindicated'), (2, 15, 'contraindicated'),
+            (3, 5, 'contraindicated'), (3, 6, 'contraindicated'), (3, 8, 'contraindicated'), (3, 15, 'contraindicated'),
+            (4, 5, 'contraindicated'), (4, 6, 'contraindicated'), (4, 8, 'contraindicated'), (4, 15, 'contraindicated'),
+            (5, 5, 'contraindicated'), (5, 6, 'contraindicated'), (5, 8, 'contraindicated'), (5, 15, 'contraindicated'),
+            (6, 5, 'contraindicated'), (6, 6, 'contraindicated'), (6, 8, 'contraindicated'), (6, 15, 'contraindicated');
+    """
+
+    private const val SEED_VACCINE_CONDITIONS = """
+    INSERT INTO vaccine_conditions (vaccine_id, condition_id, recommendation_status) VALUES
+        -- INFLUENZA
+        (1, 1, 'recommended'), (1, 2, 'recommended'), (1, 3, 'recommended'), (1, 4, 'recommended'), (1, 5, 'recommended'), (1, 7, 'recommended'), (1, 8, 'recommended'), (1, 9, 'recommended'), (1, 10, 'recommended'), (1, 11, 'recommended'), (1, 12, 'recommended'), (1, 14, 'recommended'),
+        -- PNEUMOCOCCO
+        (2, 1, 'recommended'), (2, 2, 'recommended'), (2, 3, 'recommended'), (2, 4, 'recommended'), (2, 5, 'recommended'), (2, 6, 'recommended'), (2, 7, 'recommended'), (2, 8, 'recommended'), (2, 9, 'recommended'), (2, 10, 'recommended'), (2, 11, 'recommended'), (2, 12, 'recommended'), (2, 13, 'recommended'), (2, 14, 'recommended'),
+        -- EPATITE B
+        (3, 1, 'recommended'), (3, 4, 'recommended'), (3, 5, 'recommended'), (3, 7, 'recommended'), (3, 8, 'recommended'), (3, 9, 'recommended'), (3, 10, 'recommended'), (3, 11, 'recommended'), (3, 14, 'recommended'),
+        -- EPATITE A
+        (4, 4, 'recommended'), (4, 8, 'recommended'), (4, 14, 'recommended'),
+        -- MPR
+        (5, 7, 'contraindicated'), (5, 9, 'contraindicated'), (5, 10, 'contraindicated'), (5, 11, 'contraindicated'), (5, 12, 'contraindicated'), (5, 1, 'recommended'), (5, 2, 'recommended'), (5, 3, 'recommended'), (5, 8, 'recommended'),
+        -- VARICELLA
+        (6, 7, 'contraindicated'), (6, 9, 'contraindicated'), (6, 10, 'contraindicated'), (6, 11, 'contraindicated'), (6, 12, 'contraindicated'),
+        -- Condizioni croniche
+        (6, 1, 'recommended'), (6, 2, 'recommended'), (6, 5, 'recommended'),
+        -- HERPES ZOSTER RICOMBINANTE
+        (7, 7, 'recommended'), (7, 8, 'recommended'), (7, 9, 'recommended'), (7, 10, 'recommended'), (7, 11, 'recommended'), (7, 12, 'recommended'), (7, 1, 'recommended'), (7, 2, 'recommended'), (7, 3, 'recommended'), (7, 5, 'recommended'),
+        -- HERPES ZOSTER VIVO ATTENUATO
+        (8, 7, 'contraindicated'), (8, 9, 'contraindicated'), (8, 10, 'contraindicated'), (8, 11, 'contraindicated'), (8, 12, 'contraindicated'), (8, 8, 'contraindicated'),
+        -- HPV
+        (9, 7, 'recommended'), (9, 8, 'recommended'), (9, 12, 'recommended'),
+        -- MENINGOCOCCO ACWY
+        (10, 1, 'recommended'), (10, 6, 'recommended'), (10, 7, 'recommended'), (10, 8, 'recommended'), (10, 13, 'recommended'), (10, 14, 'recommended'),
+        -- MENINGOCOCCO B
+        (11, 6, 'recommended'), (11, 7, 'recommended'), (11, 8, 'recommended'), (11, 13, 'recommended'), (11, 14, 'recommended'),
+        -- HIB
+        (12, 6, 'recommended'), (12, 7, 'recommended'), (12, 8, 'recommended'), (12, 10, 'recommended'), (12, 11, 'recommended'), (12, 14, 'recommended'),
+        -- dTpa
+        (13, 2, 'recommended'), (13, 3, 'recommended'), (13, 5, 'recommended'),
+        -- COVID-19
+        (14, 7, 'recommended'), (14, 8, 'recommended'), (14, 9, 'recommended'), (14, 10, 'recommended'), (14, 11, 'recommended'), (14, 12, 'recommended'), (14, 1, 'recommended'), (14, 2, 'recommended'), (14, 3, 'recommended'), (14, 4, 'recommended'), (14, 5, 'recommended'),
+        -- ROTAVIRUS
+        (15, 7, 'contraindicated'), (15, 9, 'contraindicated'), (15, 10, 'contraindicated'), (15, 11, 'contraindicated'), (15, 12, 'contraindicated'),
+        -- TBE
+        (17, 7, 'recommended'), (17, 12, 'recommended');
+        -- FEBBRE TIFOIDE
+        -- none
+    """
 
 }

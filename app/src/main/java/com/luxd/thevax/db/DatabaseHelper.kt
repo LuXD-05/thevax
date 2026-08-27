@@ -13,8 +13,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "TheVax.db", 
         // Creates DB & FKs from schema
         DbInfo.createDB(db)
 
-        // TODO: inserire Therapies, Vaccines e ClinicalConditions nelle tabelle (prendendo dati da fonti esterne)
-        // Esempio: // db.execSQL("INSERT INTO vaccines (name, vaccine_type) VALUES ('Influenza', 'inactivated')")
+        // Seeds DB with initial static data (therapies, vaccines & conditions)
+        DbInfo.seedDB(db)
     }
 
     // Called when upgrading DB version
