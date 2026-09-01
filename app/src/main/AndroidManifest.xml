@@ -13,6 +13,7 @@
         android:theme="@style/Theme.Thevax">
         <activity
             android:name=".ui.MainActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,12 +22,15 @@
         </activity>
         <activity
             android:name=".ui.RegisterActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false" />
         <activity
             android:name=".ui.LoginActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false" />
         <activity
             android:name=".ui.SplashScreen"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false" />
     </application>
 
