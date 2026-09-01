@@ -6,7 +6,7 @@
         android:icon="@drawable/ic_home"
         />
     <item
-        android:id="@+id/calendar_tab"
+        android:id="@+id/record_tab"
         android:title="Appuntamenti"
         android:icon="@drawable/ic_calendar"
         />

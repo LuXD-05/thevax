@@ -12,37 +12,32 @@ class RecordRepository(db: DatabaseHelper) {
 	/**
 	 * Schedules a vaccination appointment
 	 */
-	fun scheduleAppointment(userId: Int, vaccineId: Int, date: Long, notes: String? = null): Boolean {
-		val record = Record(
-			id = 0,
-			userId = userId,
-			vaccineId = vaccineId,
-			status = "scheduled",
-			date = date,
-			notes = notes
-		)
+	fun add(record: Record): Boolean {
 		return recordDAO.add(record) > 0
 	}
 
 	/**
-	 * Updates appointment status (e.g. completed, cancelled)
+	 * Updates appointment status
 	 */
-	fun updateAppointmentStatus(recordId: Int, status: String, notes: String? = null): Boolean {
-		return recordDAO.update(recordId, status, notes)
+	fun update(record: Record): Boolean {
+		return recordDAO.update(record)
+	}
+
+	/**
+	 * Deletes an appointment
+	 */
+	fun delete(recordId: Int): Boolean {
+		recordDAO.delete(recordId)
+		return true
 	}
 
 	/**
 	 * Gets all scheduled appointments for the calendar/list
 	 */
-	fun getScheduledAppointments(userId: Int): List<Record> {
-		return recordDAO.getScheduledRecordsForUser(userId)
+	fun getRecordsForUser(userId: Int): List<Record> {
+		return recordDAO.getRecordsForUser(userId)
 	}
 
-	/**
-	 * Gets all history (completed, missed, cancelled)
-	 */
-	fun getHistoryForUser(userId: Int): List<Record> {
-		return recordDAO.getRecordsForUser(userId).filter { it.status != "scheduled" }
-	}
+	fun markMissedRecords(userId: Int, todayStart: Long) = recordDAO.markMissedRecords(userId, todayStart)
 
 }

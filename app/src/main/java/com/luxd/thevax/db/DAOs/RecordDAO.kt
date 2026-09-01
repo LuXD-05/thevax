@@ -18,12 +18,17 @@ class RecordDAO(private val db: SQLiteDatabase) {
 		return db.insert("records", null, cv).toInt()
 	}
 
-	fun update(id: Int, status: String, notes: String?): Boolean {
+	fun update(record: Record): Boolean {
 		val cv = ContentValues().apply {
-			put("status", status)
-			put("notes", notes)
+			put("status", record.status)
+			put("date", record.date)
+			put("notes", record.notes)
 		}
-		return db.update("records", cv, "id = ?", arrayOf(id.toString())) > 0
+		return db.update("records", cv, "id = ?", arrayOf(record.id.toString())) > 0
+	}
+
+	fun delete(recordId: Int) {
+		db.delete("records", "id = ?", arrayOf(recordId.toString()))
 	}
 
 	fun getRecordsForUser(userId: Int): List<Record> {
@@ -46,6 +51,19 @@ class RecordDAO(private val db: SQLiteDatabase) {
 			}
 		}
 		return records
+	}
+
+	// Sets 'missed' records with status 'missed' (scheduled and not completed today)
+	fun markMissedRecords(userId: Int, todayStart: Long) {
+		val cv = ContentValues().apply {
+			put("status", "missed")
+		}
+		db.update(
+			"records",
+			cv,
+			"user_id = ? AND status = ? AND date < ?",
+			arrayOf(userId.toString(), "scheduled", todayStart.toString())
+		)
 	}
 
 	private fun Cursor.toRecord() = Record(
