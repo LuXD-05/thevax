@@ -16,10 +16,15 @@
     <color name="divider">#E5E7EB</color>
     <color name="ic_launcher_background">#E0F8FA</color>
 
-    <!-- Status Colors -->
+    <!-- Vaccine status colors -->
     <color name="status_recommended">#2E7D32</color>
     <color name="status_optional">#EF6C00</color>
     <color name="status_contraindicated">#C62828</color>
+
+    <!-- Record status colors -->
+    <color name="record_scheduled">#03A9F4</color>
+    <color name="record_completed">#4CAF50</color>
+    <color name="record_missed">#6B6B6B</color>
 
     <!-- Material 3 Light Palette -->
     <color name="md_theme_light_primary">#1E40AF</color>

@@ -7,12 +7,12 @@
         />
     <item
         android:id="@+id/calendar_tab"
-        android:title="Calendar"
+        android:title="Appuntamenti"
         android:icon="@drawable/ic_calendar"
         />
     <item
         android:id="@+id/profile_tab"
-        android:title="Profile"
+        android:title="Profilo"
         android:icon="@drawable/ic_profile"
         />
 </menu>
