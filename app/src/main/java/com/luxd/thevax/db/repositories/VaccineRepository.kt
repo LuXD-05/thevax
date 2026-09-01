@@ -14,6 +14,14 @@ class VaccineRepository(db: DatabaseHelper) {
 	private val recordDAO by lazy { RecordDAO(database) }
 
 	/**
+	 * Gets all vaccines
+	 * @return the list of vaccines
+	 */
+	fun getAll(): List<Vaccine> {
+		return vaccineDAO.getAll()
+	}
+
+	/**
 	 * Evaluates all vaccines in db for a user (therapy + conditions + age rules)
 	 * @param user the user to evaluate for
 	 * @param userConditions the user's clinical conditions
