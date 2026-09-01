@@ -3,6 +3,7 @@ package com.luxd.thevax.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.luxd.thevax.R
 import com.luxd.thevax.databinding.FragmentHomeBinding
@@ -11,8 +12,6 @@ import com.luxd.thevax.db.entities.User
 import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.db.repositories.VaccineRepository
 import com.luxd.thevax.services.SessionService
-import com.luxd.thevax.utils.push
-import com.luxd.thevax.utils.pop
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.luxd.thevax.adapters.VaccineAdapter
 import com.luxd.thevax.db.entities.ClinicalCondition
@@ -47,6 +46,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val conditionsText = if (userConditions.isEmpty()) "Nessuna" else userConditions.joinToString(", ") { it.conditionName }
         binding.tvConditions.text = "Condizioni: $conditionsText"
 
+        refreshData()
+    }
+
+    private fun refreshData() {
+
         // Fetch vaccines evaluations for user
         val evaluations = vaccineRepo.evaluateVaccinesForUser(currentUser, userConditions)
 
@@ -66,10 +70,25 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             // Setup vaccines recycler view
             binding.rvVaccines.layoutManager = LinearLayoutManager(requireContext())
             binding.rvVaccines.adapter = VaccineAdapter(evaluations) { vaccine, status ->
-                // Opens vaccine detail page //TODO: create VaxDetailFragment
-                //push(VaccineDetailFragment.newInstance(vaccine, status))
+                // Cant book contraindicated vaccines
+                if (status == "contraindicated") {
+                    Toast.makeText(requireContext(), "Non è possibile prenotare un vaccino controindicato.", Toast.LENGTH_LONG).show()
+                    return@VaccineAdapter
+                }
+                // Opens vaccine booking dialog
+                val dialog = VaxBookingHomeDialogFragment(
+                    vaccine = vaccine,
+                    status = status,
+                    userId = currentUser.id
+                ) {
+                    // Callback chiamata alla conferma
+                    Toast.makeText(requireContext(), "Prenotazione confermata!", Toast.LENGTH_SHORT).show()
+                    refreshData()
+                }
+                dialog.show(parentFragmentManager, "VaxBookingHomeDialog")
             }
         }
+
     }
 
     override fun onDestroyView() {

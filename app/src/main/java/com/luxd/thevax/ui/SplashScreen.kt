@@ -39,7 +39,7 @@ class SplashScreen : AppCompatActivity() {
 
             when (tab.itemId) {
                 R.id.home_tab -> supportFragmentManager.beginTransaction().replace(R.id.tab_container, HomeFragment()).commit()
-                R.id.calendar_tab -> supportFragmentManager.beginTransaction().replace(R.id.tab_container, CalendarFragment()).commit()
+                R.id.record_tab -> supportFragmentManager.beginTransaction().replace(R.id.tab_container, RecordFragment()).commit()
                 R.id.profile_tab -> supportFragmentManager.beginTransaction().replace(R.id.tab_container, ProfileFragment()).commit()
             }
             true
