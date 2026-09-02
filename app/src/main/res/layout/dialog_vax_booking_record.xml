@@ -25,13 +25,13 @@
         android:id="@+id/btnChangeDateTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Modifica"/>
+        android:text="@string/vaccine_modify"/>
 
     <Button
         android:id="@+id/btnComplete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Segna come completato"
+        android:text="@string/vaccine_mark_as_complete"
         android:backgroundTint="@android:color/holo_green_dark"
         android:textColor="@android:color/white"
         android:layout_marginTop="8dp"/>
@@ -40,7 +40,7 @@
         android:id="@+id/btnCancel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Cancella"
+        android:text="@string/vaccine_cancel"
         android:backgroundTint="@android:color/holo_red_dark"
         android:textColor="@android:color/white"
         android:layout_marginTop="8dp"/>
