@@ -228,7 +228,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:hint="Scegli..."/>
+                        android:hint="@string/choice_conditions"/>
 
                 </com.google.android.material.textfield.TextInputLayout>
 

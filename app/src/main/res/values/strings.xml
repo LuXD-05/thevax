@@ -1,7 +1,10 @@
 <resources>
     <string name="app_name">TheVax</string>
+    <string name="app_description">Supporto decisionale vaccinale\nin terapia biologica</string>
+    <string name="app_disclaimer">Disclaimer: App a scopo dimostrativo/scolastico.</string>
     <string name="login">Accedi</string>
-    <string name="register">Registrati</string>
+    <string name="register">Registrazione</string>
+    <string name="register_button">Registrati</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="confirm_password">Conferma password</string>
@@ -17,6 +20,7 @@
     <string name="therapies">Terapie biologiche</string>
     <string name="no_therapies">Nessuna terapia inserita</string>
     <string name="conditions">Condizioni cliniche</string>
+    <string name="choice_conditions">Scegli…</string>
     <string name="no_conditions">Nessuna condizione inserita</string>
     <string name="add_therapy">Aggiungi terapia</string>
     <string name="add_condition">Aggiungi condizione</string>
@@ -27,7 +31,26 @@
     <string name="cancel">Annulla</string>
     <string name="logout">Logout</string>
     <string name="none">Nessuna</string>
+    <string name="home_loading">Caricamento...</string>
+    <string name="home_age_sex">Età: -- | Sesso: --"</string>
+    <string name="home_no_therapy">Terapia: Nessuna"</string>
+    <string name="home_no_conditions">Condizioni: Nessuna"</string>
+    <string name="home_no_vaccines">Nessun vaccino da mostrare per questo profilo"</string>
     <string name="vaccine_plan">PIANO CONSIGLIATO</string>
+    <string name="vaccine_title">Prenotazione Vaccino</string>
+    <string name="vaccine_info">Nome: --\nTipo: --\nEtà: --</string>
+    <string name="vaccine_status">Status Valutazione:</string>
+    <string name="vaccine_reccomended">Raccomandati</string>
+    <string name="vaccine_optional">Opzionali</string>
+    <string name="vaccine_contraindicated">Controindicati</string>
+    <string name="vaccine_booking">Prenota</string>
+    <string name="vaccine_selected_date">Nessuna data/ora selezionata</string>
+    <string name="vaccine_modify">Modifica</string>
+    <string name="vaccine_mark_as_complete">Segna come completato</string>
+    <string name="vaccine_confirm">Conferma</string>
+    <string name="vaccine_cancel">Cancella</string>
+    <string name="records_appointments">Appuntamenti</string>
+    <string name="records_no_appointments">Nessun appuntamento passato o futuro.</string>
     <string name="profile_patient_data">Dati del paziente</string>
     <string name="profile_first_name">Nome</string>
     <string name="profile_last_name">Cognome</string>

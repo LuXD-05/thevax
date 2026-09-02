@@ -204,63 +204,38 @@ object DbInfo {
 
     // Check results in view
     private const val SEED_THERAPY_VACCINES = """
-        INSERT INTO therapy_vaccines (therapy_id, vaccine_id, recommendation_status) VALUES
-            -- Vaccini NON vivi raccomandati a chiunque sia in terapia biologica
-            -- 1=Influenza, 2=Pneumococco, 7=Zoster ricombinante (RZV), 14=COVID-19
-            (1, 1, 'recommended'), (1, 2, 'recommended'), (1, 7, 'recommended'), (1, 14, 'recommended'),
-            (2, 1, 'recommended'), (2, 2, 'recommended'), (2, 7, 'recommended'), (2, 14, 'recommended'),
-            (3, 1, 'recommended'), (3, 2, 'recommended'), (3, 7, 'recommended'), (3, 14, 'recommended'),
-            (4, 1, 'recommended'), (4, 2, 'recommended'), (4, 7, 'recommended'), (4, 14, 'recommended'),
-            (5, 1, 'recommended'), (5, 2, 'recommended'), (5, 14, 'recommended'),
-            (6, 1, 'recommended'), (6, 2, 'recommended'), (6, 7, 'recommended'), (6, 14, 'recommended'),
-            -- Vaccini VIVI attenuati: controindicati sotto immunosoppressione (EULAR, CDC)
-            -- 5=MPR, 6=Varicella, 8=Zoster vivo (ZVL), 15=Rotavirus
-            (1, 5, 'contraindicated'), (1, 6, 'contraindicated'), (1, 8, 'contraindicated'), (1, 15, 'contraindicated'),
-            (2, 5, 'contraindicated'), (2, 6, 'contraindicated'), (2, 8, 'contraindicated'), (2, 15, 'contraindicated'),
-            (3, 5, 'contraindicated'), (3, 6, 'contraindicated'), (3, 8, 'contraindicated'), (3, 15, 'contraindicated'),
-            (4, 5, 'contraindicated'), (4, 6, 'contraindicated'), (4, 8, 'contraindicated'), (4, 15, 'contraindicated'),
-            (5, 5, 'contraindicated'), (5, 6, 'contraindicated'), (5, 8, 'contraindicated'), (5, 15, 'contraindicated'),
-            (6, 5, 'contraindicated'), (6, 6, 'contraindicated'), (6, 8, 'contraindicated'), (6, 15, 'contraindicated');
-    """
+    INSERT INTO therapy_vaccines (therapy_id, vaccine_id, recommendation_status) VALUES
+        (1, 1, 'recommended'), (1, 2, 'recommended'), (1, 7, 'recommended'), (1, 14, 'recommended'),
+        (2, 1, 'recommended'), (2, 2, 'recommended'), (2, 7, 'recommended'), (2, 14, 'recommended'),
+        (3, 1, 'recommended'), (3, 2, 'recommended'), (3, 7, 'recommended'), (3, 14, 'recommended'),
+        (4, 1, 'recommended'), (4, 2, 'recommended'), (4, 7, 'recommended'), (4, 14, 'recommended'),
+        (5, 1, 'recommended'), (5, 2, 'recommended'), (5, 3, 'recommended'), (5, 7, 'recommended'), (5, 14, 'recommended'),
+        (6, 1, 'recommended'), (6, 2, 'recommended'), (6, 7, 'recommended'), (6, 14, 'recommended'),
+        (1, 5, 'contraindicated'), (1, 6, 'contraindicated'), (1, 8, 'contraindicated'), (1, 15, 'contraindicated'),
+        (2, 5, 'contraindicated'), (2, 6, 'contraindicated'), (2, 8, 'contraindicated'), (2, 15, 'contraindicated'),
+        (3, 5, 'contraindicated'), (3, 6, 'contraindicated'), (3, 8, 'contraindicated'), (3, 15, 'contraindicated'),
+        (4, 5, 'contraindicated'), (4, 6, 'contraindicated'), (4, 8, 'contraindicated'), (4, 15, 'contraindicated'),
+        (5, 5, 'contraindicated'), (5, 6, 'contraindicated'), (5, 8, 'contraindicated'), (5, 15, 'contraindicated'),
+        (6, 5, 'contraindicated'), (6, 6, 'contraindicated'), (6, 8, 'contraindicated'), (6, 15, 'contraindicated');
+"""
 
     private const val SEED_VACCINE_CONDITIONS = """
     INSERT INTO vaccine_conditions (vaccine_id, condition_id, recommendation_status) VALUES
-        -- INFLUENZA
         (1, 1, 'recommended'), (1, 2, 'recommended'), (1, 3, 'recommended'), (1, 4, 'recommended'), (1, 5, 'recommended'), (1, 7, 'recommended'), (1, 8, 'recommended'), (1, 9, 'recommended'), (1, 10, 'recommended'), (1, 11, 'recommended'), (1, 12, 'recommended'), (1, 14, 'recommended'),
-        -- PNEUMOCOCCO
         (2, 1, 'recommended'), (2, 2, 'recommended'), (2, 3, 'recommended'), (2, 4, 'recommended'), (2, 5, 'recommended'), (2, 6, 'recommended'), (2, 7, 'recommended'), (2, 8, 'recommended'), (2, 9, 'recommended'), (2, 10, 'recommended'), (2, 11, 'recommended'), (2, 12, 'recommended'), (2, 13, 'recommended'), (2, 14, 'recommended'),
-        -- EPATITE B
         (3, 1, 'recommended'), (3, 4, 'recommended'), (3, 5, 'recommended'), (3, 7, 'recommended'), (3, 8, 'recommended'), (3, 9, 'recommended'), (3, 10, 'recommended'), (3, 11, 'recommended'), (3, 14, 'recommended'),
-        -- EPATITE A
-        (4, 4, 'recommended'), (4, 8, 'recommended'), (4, 14, 'recommended'),
-        -- MPR
-        (5, 7, 'contraindicated'), (5, 9, 'contraindicated'), (5, 10, 'contraindicated'), (5, 11, 'contraindicated'), (5, 12, 'contraindicated'), (5, 1, 'recommended'), (5, 2, 'recommended'), (5, 3, 'recommended'), (5, 8, 'recommended'),
-        -- VARICELLA
-        (6, 7, 'contraindicated'), (6, 9, 'contraindicated'), (6, 10, 'contraindicated'), (6, 11, 'contraindicated'), (6, 12, 'contraindicated'),
-        -- Condizioni croniche
-        (6, 1, 'recommended'), (6, 2, 'recommended'), (6, 5, 'recommended'),
-        -- HERPES ZOSTER RICOMBINANTE
-        (7, 7, 'recommended'), (7, 8, 'recommended'), (7, 9, 'recommended'), (7, 10, 'recommended'), (7, 11, 'recommended'), (7, 12, 'recommended'), (7, 1, 'recommended'), (7, 2, 'recommended'), (7, 3, 'recommended'), (7, 5, 'recommended'),
-        -- HERPES ZOSTER VIVO ATTENUATO
-        (8, 7, 'contraindicated'), (8, 9, 'contraindicated'), (8, 10, 'contraindicated'), (8, 11, 'contraindicated'), (8, 12, 'contraindicated'), (8, 8, 'contraindicated'),
-        -- HPV
+        (4, 4, 'recommended'), (4, 8, 'recommended'),
+        (5, 7, 'contraindicated'), (5, 9, 'contraindicated'), (5, 10, 'contraindicated'), (5, 11, 'contraindicated'), (5, 12, 'contraindicated'), (5, 8, 'recommended'),
+        (6, 7, 'contraindicated'), (6, 9, 'contraindicated'), (6, 10, 'contraindicated'), (6, 11, 'contraindicated'), (6, 12, 'contraindicated'), (6, 8, 'recommended'),
+        (7, 7, 'recommended'), (7, 8, 'recommended'), (7, 9, 'recommended'), (7, 10, 'recommended'), (7, 11, 'recommended'), (7, 12, 'recommended'),
+        (8, 7, 'contraindicated'), (8, 8, 'contraindicated'), (8, 9, 'contraindicated'), (8, 10, 'contraindicated'), (8, 11, 'contraindicated'), (8, 12, 'contraindicated'),
         (9, 7, 'recommended'), (9, 8, 'recommended'), (9, 12, 'recommended'),
-        -- MENINGOCOCCO ACWY
-        (10, 1, 'recommended'), (10, 6, 'recommended'), (10, 7, 'recommended'), (10, 8, 'recommended'), (10, 13, 'recommended'), (10, 14, 'recommended'),
-        -- MENINGOCOCCO B
-        (11, 6, 'recommended'), (11, 7, 'recommended'), (11, 8, 'recommended'), (11, 13, 'recommended'), (11, 14, 'recommended'),
-        -- HIB
-        (12, 6, 'recommended'), (12, 7, 'recommended'), (12, 8, 'recommended'), (12, 10, 'recommended'), (12, 11, 'recommended'), (12, 14, 'recommended'),
-        -- dTpa
+        (10, 6, 'recommended'), (10, 7, 'recommended'), (10, 8, 'recommended'), (10, 13, 'recommended'), (10, 14, 'recommended'),
+        (11, 6, 'recommended'), (11, 7, 'recommended'), (11, 13, 'recommended'), (11, 14, 'recommended'),
+        (12, 6, 'recommended'), (12, 7, 'recommended'), (12, 8, 'recommended'), (12, 11, 'recommended'), (12, 13, 'recommended'), (12, 14, 'recommended'),
         (13, 2, 'recommended'), (13, 3, 'recommended'), (13, 5, 'recommended'),
-        -- COVID-19
-        (14, 7, 'recommended'), (14, 8, 'recommended'), (14, 9, 'recommended'), (14, 10, 'recommended'), (14, 11, 'recommended'), (14, 12, 'recommended'), (14, 1, 'recommended'), (14, 2, 'recommended'), (14, 3, 'recommended'), (14, 4, 'recommended'), (14, 5, 'recommended'),
-        -- ROTAVIRUS
-        (15, 7, 'contraindicated'), (15, 9, 'contraindicated'), (15, 10, 'contraindicated'), (15, 11, 'contraindicated'), (15, 12, 'contraindicated'),
-        -- TBE
-        (17, 7, 'recommended'), (17, 12, 'recommended');
-        -- FEBBRE TIFOIDE
-        -- none
-    """
+        (14, 1, 'recommended'), (14, 2, 'recommended'), (14, 3, 'recommended'), (14, 4, 'recommended'), (14, 5, 'recommended'), (14, 7, 'recommended'), (14, 8, 'recommended'), (14, 9, 'recommended'), (14, 10, 'recommended'), (14, 11, 'recommended'), (14, 12, 'recommended'), (14, 14, 'recommended'),
+        (15, 7, 'contraindicated'), (15, 9, 'contraindicated'), (15, 10, 'contraindicated'), (15, 11, 'contraindicated'), (15, 12, 'contraindicated');
+"""
 
 }
