@@ -14,6 +14,8 @@ import com.luxd.thevax.db.entities.Record
 import com.luxd.thevax.db.entities.Vaccine
 import com.luxd.thevax.db.repositories.RecordRepository
 import java.util.Calendar
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class VaxBookingHomeDialogFragment(
 	private val vaccine: Vaccine,
@@ -77,6 +79,10 @@ class VaxBookingHomeDialogFragment(
 		binding.btnConfirm.setOnClickListener {
 			if (!isDateTimeSelected) return@setOnClickListener
 
+			// Disables btns to avoid multiple clicks
+			binding.btnConfirm.isEnabled = false
+			binding.btnPickDateTime.isEnabled = false
+
 			// Adds new record to db
 			val newRecord = Record(
 				userId = userId,
@@ -85,9 +91,18 @@ class VaxBookingHomeDialogFragment(
 				date = calendar.timeInMillis,
 				notes = null
 			)
-			recordRepo.add(newRecord)
-			onBookingConfirmed.invoke()
-			dismiss()
+
+			lifecycleScope.launch {
+				// Adds record to db & closes dialog (or toast error)
+				if (recordRepo.add(newRecord)) {
+					onBookingConfirmed.invoke()
+					dismiss()
+				} else {
+					Toast.makeText(requireContext(), "Errore prenotazione", Toast.LENGTH_SHORT).show()
+					binding.btnConfirm.isEnabled = true
+					binding.btnPickDateTime.isEnabled = true
+				}
+			}
 		}
 
 	}

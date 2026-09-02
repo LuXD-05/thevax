@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
-import com.luxd.thevax.R
 import com.luxd.thevax.databinding.DialogVaxBookingRecordBinding
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.entities.Record
@@ -17,6 +16,8 @@ import com.luxd.thevax.db.repositories.RecordRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class VaxBookingRecordsDialogFragment(
 	private val item: Pair<Vaccine, Record>,
@@ -39,7 +40,7 @@ class VaxBookingRecordsDialogFragment(
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
-		var record = item.second
+		val record = item.second
 		calendar.timeInMillis = record.date
 
 		// Set vaccine name & current date & time
@@ -68,6 +69,8 @@ class VaxBookingRecordsDialogFragment(
 
 		// On btn edit click
 		binding.btnChangeDateTime.setOnClickListener {
+			// Disables btn to avoid multiple clicks
+			it.isEnabled = false
 
 			// Pick new date
 			DatePickerDialog(requireContext(), { _, y, m, d ->
@@ -85,21 +88,29 @@ class VaxBookingRecordsDialogFragment(
 						calendar.set(Calendar.HOUR_OF_DAY, hour)
 						calendar.set(Calendar.MINUTE, min)
 
-						// Updates record in db
+						// Update local record date & status
 						record.date = calendar.timeInMillis
 						record.status = "scheduled" // re-puts scheduled status (overwrites missed)
-						repo.update(record)
 
-						// Updates dialog UI with new date + current date & time
-						calendar.timeInMillis = record.date
-						binding.tvCurrentDateTime.text = "Data: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(calendar.time)}"
+						lifecycleScope.launch {
+							// Updates record in db
+							if (repo.update(record)) {
+								// Updates dialog UI with new date + current date & time
+								calendar.timeInMillis = record.date
+								binding.tvCurrentDateTime.text = "Data: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(calendar.time)}"
 
-						Toast.makeText(requireContext(), "Aggiornato", Toast.LENGTH_SHORT).show()
-
-						// Closes dialog
-						onActionCompleted.invoke()
-						dismiss()
+								// Toast + closes dialog
+								Toast.makeText(requireContext(), "Aggiornato", Toast.LENGTH_SHORT).show()
+								onActionCompleted.invoke()
+								dismiss()
+							} else {
+								Toast.makeText(requireContext(), "Errore aggiornamento", Toast.LENGTH_SHORT).show()
+								binding.btnChangeDateTime.isEnabled = true
+							}
+						}
 					} else {
+						// Re-enables btn
+						it.isEnabled = true
 						Toast.makeText(requireContext(), "Orario non valido (8-12, 14-18)", Toast.LENGTH_SHORT).show()
 					}
 
@@ -111,18 +122,36 @@ class VaxBookingRecordsDialogFragment(
 
 		// Set record as completed on btn click
 		binding.btnComplete.setOnClickListener {
+			it.isEnabled = false
 			record.status = "completed"
-			repo.update(record)
-			onActionCompleted.invoke()
-			dismiss()
+
+			viewLifecycleOwner.lifecycleScope.launch {
+				// Updates record in db & closes dialog (or toast error)
+				if (repo.update(record)) {
+					onActionCompleted.invoke()
+					dismiss()
+				} else {
+					Toast.makeText(requireContext(), "Errore completamento", Toast.LENGTH_SHORT).show()
+					binding.btnComplete.isEnabled = true
+				}
+			}
 		}
 
 		// Deletes record on delete btn click
 		binding.btnCancel.setOnClickListener {
-			repo.delete(record.id)
-			Toast.makeText(requireContext(), "Appuntamento cancellato. Il vaccino è di nuovo disponibile in Home.", Toast.LENGTH_LONG).show()
-			onActionCompleted.invoke()
-			dismiss()
+			it.isEnabled = false
+
+			viewLifecycleOwner.lifecycleScope.launch {
+				// Deletes record from db & closes dialog (or toast error)
+				if (repo.delete(record.id)) {
+					Toast.makeText(requireContext(), "Appuntamento cancellato. Il vaccino è di nuovo disponibile in Home.", Toast.LENGTH_LONG).show()
+					onActionCompleted.invoke()
+					dismiss()
+				} else {
+					Toast.makeText(requireContext(), "Errore cancellazione", Toast.LENGTH_SHORT).show()
+					binding.btnCancel.isEnabled = true
+				}
+			}
 		}
 	}
 
@@ -130,5 +159,4 @@ class VaxBookingRecordsDialogFragment(
 		super.onDestroyView()
 		_binding = null
 	}
-
 }

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
@@ -17,6 +16,8 @@ import com.luxd.thevax.db.entities.Therapy
 import com.luxd.thevax.db.entities.User
 import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.services.SessionService
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -27,47 +28,17 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	private val repo by lazy { UserRepository(db) }
 
 	private var availableConditions = listOf<ClinicalCondition>()
+	private var filteredConditions = listOf<ClinicalCondition>()
 	private val conditions = mutableListOf<ClinicalCondition>()
 	private var therapies = listOf<Therapy>()
 
-	private var currentUser: User? = null
+	private lateinit var currentUser: User
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		_binding = FragmentProfileBinding.bind(view)
 
-		// Load user from session (cache or DB)
-		currentUser = SessionService.getInstance().getUser() ?: return logout()
-
-		// Get therapies + conditions
-		therapies = repo.getTherapies()
-		availableConditions = repo.getConditions()
-		
-		// Load existing user conditions
-		conditions.clear()
-		conditions.addAll(repo.getConditionsForUser(currentUser!!.id))
-
-		// Setup dropdown with therapies
-		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
-		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
-
-		// Setup dropdown with conditions
-		val dropdownConditions = availableConditions.map { it.conditionName }.toTypedArray()
-		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
-
-
-		// Setup multi-select dropdown for conditions
-		binding.autoCompleteConditions.setOnItemClickListener { _, _, position, _ ->
-			val selected = availableConditions[position]
-			if (conditions.none { it.id == selected.id }) {
-				conditions.add(selected)
-				renderConditions()
-			}
-			binding.autoCompleteConditions.setText("", false)
-		}
-
-		// HANDLERS
-
+		// Handlers
 		binding.btnSaveProfile.setOnClickListener { saveProfile() }
 		binding.btnLogout.setOnClickListener { logout() }
 
@@ -75,30 +46,74 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 	}
 
 	private fun loadData() {
-		val user = currentUser ?: return // TODO: ??? (non un problema x ora)
+		viewLifecycleOwner.lifecycleScope.launch {
 
-		// Setup user fields
-		binding.etFirstName.setText(user.firstName)
-		binding.etLastName.setText(user.lastName)
-		binding.etAge.setText(user.age.toString())
-		binding.etEmail.setText(user.email)
+			// Load user from session (cache or DB)
+			currentUser = SessionService.getInstance().getUser() ?: return@launch logout()
 
-		if (user.sex == "F") {
-			binding.rbMale.isChecked = false
-			binding.rbFemale.isChecked = true
-		} else {
-			binding.rbMale.isChecked = true
-			binding.rbFemale.isChecked = false
+			// Get therapies + conditions
+			therapies = repo.getTherapies()
+			availableConditions = repo.getConditions()
+
+			// Load existing user conditions
+			conditions.clear()
+			conditions.addAll(repo.getConditionsForUser(currentUser.id))
+
+			// Setup dropdown with therapies
+			val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
+			(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).apply {
+				setSimpleItems(dropdownTherapies)
+
+				// Disable filtering so all items are shown even after selection or rotation
+				threshold = Int.MAX_VALUE
+
+				// Clear filter that might be applied by restored text after rotation
+				setText(text.toString(), false)
+
+				setOnItemClickListener { _, _, position, _ ->
+					val selected = dropdownTherapies[position]
+					setText(selected, false)
+				}
+			}
+
+			updateConditionsDropdown()
+
+			// Setup multi-select dropdown for conditions
+			binding.autoCompleteConditions.setOnItemClickListener { _, _, position, _ ->
+				val selected = filteredConditions[position]
+				if (conditions.none { it.id == selected.id }) {
+					conditions.add(selected)
+					renderConditions()
+				}
+				binding.autoCompleteConditions.setText("", false)
+			}
+
+			// Setup user fields
+			binding.etFirstName.setText(currentUser.firstName)
+			binding.etLastName.setText(currentUser.lastName)
+			binding.etAge.setText(currentUser.age.toString())
+			binding.etEmail.setText(currentUser.email)
+
+			if (currentUser.sex == "F") {
+				binding.rbMale.isChecked = false
+				binding.rbFemale.isChecked = true
+			} else {
+				binding.rbMale.isChecked = true
+				binding.rbFemale.isChecked = false
+			}
+
+			val currentTherapyName = therapies.find { it.id == currentUser.therapyId }?.name ?: "Nessuna"
+			binding.autoCompleteTherapy.setText(currentTherapyName, false)
+
+			// Setup user's conditions
+			renderConditions()
+
 		}
-
-		val currentTherapyName = therapies.find { it.id == user.therapyId }?.name ?: "Nessuna"
-		binding.autoCompleteTherapy.setText(currentTherapyName, false)
-
-		// Setup user's conditions
-		renderConditions()
 	}
 
-    //Update the list of conditions showing them as Chip
+	/**
+	 * Renders the conditions chips
+	 */
 	private fun renderConditions() {
 		binding.chipGroupConditions.removeAllViews()
 		conditions.forEach { condition ->
@@ -114,11 +129,25 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		}
 		binding.chipGroupConditions.visibility = if (conditions.isEmpty()) View.GONE else View.VISIBLE
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
+
+		updateConditionsDropdown()
 	}
 
-	private fun saveProfile() {
-		val user = currentUser ?: return
+	/**
+	 * Updates the available conditions dropdown
+	 */
+	private fun updateConditionsDropdown() {
+		filteredConditions = availableConditions.filter { available ->
+			conditions.none { it.id == available.id }
+		}
+		val items = filteredConditions.map { it.conditionName }.toTypedArray()
+		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(items)
+	}
 
+	/**
+	 * Saves the user profile in db
+	 */
+	private fun saveProfile() {
 		val firstName = binding.etFirstName.text.toString().trim()
 		val lastName = binding.etLastName.text.toString().trim()
 		val ageStr = binding.etAge.text.toString()
@@ -164,11 +193,13 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 		fields["therapy_id"] = selectedTherapyId
 		fields["conditions"] = conditions.toList()
 
-		// Updates the user in db
-		if (repo.update(user.id, fields)) {
-			Snackbar.make(binding.root, "Profilo aggiornato", Snackbar.LENGTH_LONG).show()
-		} else {
-			showError("Errore durante il salvataggio.")
+		viewLifecycleOwner.lifecycleScope.launch {
+			// Updates the user in db
+			if (repo.update(currentUser.id, fields)) {
+				Snackbar.make(binding.root, "Profilo aggiornato", Snackbar.LENGTH_LONG).show()
+			} else {
+				showError("Errore durante il salvataggio.")
+			}
 		}
 	}
 

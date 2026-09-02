@@ -10,10 +10,10 @@ import com.luxd.thevax.db.DAOs.ClinicalConditionDAO
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.services.SessionService
 import com.luxd.thevax.services.PasswordService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class UserRepository(db: DatabaseHelper) {
-
-	// TODO: handle operations in a background thread (like async/await, in order to not make the app crash & keep the main thread for the UI)
 
 	private val database by lazy { db.writableDatabase }
 	private val userDAO by lazy { UserDAO(database) }
@@ -25,50 +25,54 @@ class UserRepository(db: DatabaseHelper) {
 	 * @param registerDTO the registration info object (User + Therapies + ClinicalConditions)
 	 * @return true if the user was registered, false otherwise
 	 */
-	fun register(registerDTO: RegisterDTO): User? {
-		// Check for duplicate user (if email exists)
-		if (userDAO.findByEmail(registerDTO.email) != null)
-			return null
+	suspend fun register(registerDTO: RegisterDTO): User? {
 
-		// Creates an user with hashed password
-		var user = User(
-			email = registerDTO.email,
-			passwordHash = PasswordService.hash(registerDTO.password),
-			firstName = registerDTO.firstName,
-			lastName = registerDTO.lastName,
-			age = registerDTO.age,
-			sex = registerDTO.sex,
-			therapyId = registerDTO.therapyId
-		)
+		return withContext(Dispatchers.IO) {
 
-		database.beginTransaction()
+			// Check for duplicate user (if email exists)
+			if (userDAO.findByEmail(registerDTO.email) != null) return@withContext null
 
-		try {
-			// Adds user to db
-			val userId = userDAO.add(user)
-			if (userId <= 0) return null // fail check
+			// Creates an user with hashed password
+			var user = User(
+				email = registerDTO.email,
+				passwordHash = PasswordService.hash(registerDTO.password),
+				firstName = registerDTO.firstName,
+				lastName = registerDTO.lastName,
+				age = registerDTO.age,
+				sex = registerDTO.sex,
+				therapyId = registerDTO.therapyId
+			)
 
-			// Updates the local user object with its db id
-			user = user.copy(id = userId)
+			database.beginTransaction()
 
-			// Adds its clinical conditions in bulk
-			if (registerDTO.conditions.isNotEmpty()) {
-				// Rollback if fails
-				if (!conditionDAO.updateForUser(userId, registerDTO.conditions.map { it.id }))
-					return null
+			try {
+				// Adds user to db
+				val userId = userDAO.add(user)
+				if (userId <= 0) return@withContext null // fail check
+
+				// Updates the local user object with its db id
+				user = user.copy(id = userId)
+
+				// Adds its clinical conditions in bulk
+				if (registerDTO.conditions.isNotEmpty()) {
+					// Rollback if fails
+					if (!conditionDAO.updateForUser(userId, registerDTO.conditions.map { it.id }))
+						return@withContext null
+				}
+
+				database.setTransactionSuccessful()
+
+			} catch (e: Exception) {
+				return@withContext null
+			} finally {
+				database.endTransaction()
 			}
 
-			database.setTransactionSuccessful()
+			// Saves user in session
+			SessionService.getInstance().saveUser(user)
+			user
 
-		} catch (e: Exception) {
-			return null
-		} finally {
-			database.endTransaction()
 		}
-
-		// Saves user in session
-		SessionService.getInstance().saveUser(user)
-		return user
 	}
 
 	/**
@@ -77,20 +81,25 @@ class UserRepository(db: DatabaseHelper) {
 	 * @param password the password of the user
 	 * @return the user if found & password matches, otherwise null
 	 */
-	fun login(email: String, password: String): User? {
-		// Checks if user exists by email (otherwise returns null)
-		val user = userDAO.findByEmail(email) ?: return null
+	suspend fun login(email: String, password: String): User? {
 
-		// Checks if password matches
-		val passwordMatches = PasswordService.verify(password, user.passwordHash)
+		return withContext(Dispatchers.IO) {
 
-		// Returns user (& saves its id in session) if password matches, otherwise returns null
-		if (passwordMatches) {
-			// Saves user in session
-			SessionService.getInstance().saveUser(user)
-			return user
+			// Checks if user exists by email (otherwise returns null)
+			val user = userDAO.findByEmail(email) ?: return@withContext null
 
-		} else return null
+			// Checks if password matches
+			val passwordMatches = PasswordService.verify(password, user.passwordHash)
+
+			// Returns user (& saves its id in session) if password matches, otherwise returns null
+			if (passwordMatches) {
+				// Saves user in session
+				SessionService.getInstance().saveUser(user)
+				user
+
+			} else null
+
+		}
 	}
 
 	/**
@@ -100,45 +109,43 @@ class UserRepository(db: DatabaseHelper) {
 	 * @return true if the updated successfully, otherwise false
 	 */
 	@Suppress("UNCHECKED_CAST")
-	fun update(userId: Int, fields: Map<String, Any?>): Boolean {
-		val userFields = fields.toMutableMap()
-		val conditions = userFields.remove("conditions") as? List<ClinicalCondition>
+	suspend fun update(userId: Int, fields: Map<String, Any?>): Boolean {
 
-		// Replaces password with hashed version (if modified)
-		val password = userFields.remove("password") as? String
-		if (!password.isNullOrBlank()) {
-			userFields["password_hash"] = PasswordService.hash(password)
-		}
+		return withContext(Dispatchers.IO) {
 
-		// Contains nested transacts --> each needs to be set succesful, else rollback
-		database.beginTransaction()
+			val userFields = fields.toMutableMap()
+			val conditions = userFields.remove("conditions") as? List<ClinicalCondition>
 
-		try {
-			// Updates user in DB
-			if (userFields.isNotEmpty()) {
-				// If update fails --> rollback
-				if (!userDAO.update(userId, userFields))
-					return false
+			// Replaces password with hashed version (if modified)
+			val password = userFields.remove("password") as? String
+			if (!password.isNullOrBlank()) {
+				userFields["password_hash"] = PasswordService.hash(password)
 			}
 
-			// Updates conditions
-			if (conditions != null) {
-				if (!conditionDAO.updateForUser(userId, conditions.map { it.id }))
-					return false
+			// Contains nested transacts --> each needs to be set succesful, else rollback
+			database.beginTransaction()
+
+			try {
+				// Updates user in DB | if fails --> rollback
+				if (userFields.isNotEmpty() && !userDAO.update(userId, userFields)) return@withContext false
+
+				// Updates conditions | if fails --> rollback
+				if (conditions != null && !conditionDAO.updateForUser(userId, conditions.map { it.id })) return@withContext false
+
+				database.setTransactionSuccessful()
+
+				// Updates user in session
+				userDAO.findById(userId)?.let { updatedUser ->
+					SessionService.getInstance().saveUser(updatedUser)
+				}
+				true
+
+			} catch (e: Exception) {
+				false
+			} finally {
+				database.endTransaction()
 			}
 
-			database.setTransactionSuccessful()
-
-			// Updates user in session
-			userDAO.findById(userId)?.let { updatedUser ->
-				SessionService.getInstance().saveUser(updatedUser)
-			}
-
-			return true
-		} catch (e: Exception) {
-			return false
-		} finally {
-			database.endTransaction()
 		}
 	}
 
@@ -147,41 +154,31 @@ class UserRepository(db: DatabaseHelper) {
 	 * @param userId the id of the user
 	 * @return the user if found, null otherwise
 	 */
-	fun getUserById(userId: Int): User? {
-		return userDAO.findById(userId)
-	}
+	suspend fun getUserById(userId: Int): User? = withContext(Dispatchers.IO) { userDAO.findById(userId) }
 
 	/**
 	 * Gets all therapies
 	 * @return the list of therapies
 	 */
-	fun getTherapies(): List<Therapy> {
-		return therapyDAO.getAll()
-	}
+	suspend fun getTherapies(): List<Therapy> = withContext(Dispatchers.IO) { therapyDAO.getAll() }
 
 	/**
 	 * Gets all available conditions in the system
 	 * @return the list of clinical conditions
 	 */
-	fun getConditions(): List<ClinicalCondition> {
-		return conditionDAO.getAll()
-	}
+	suspend fun getConditions(): List<ClinicalCondition> = withContext(Dispatchers.IO) { conditionDAO.getAll() }
 
 	/**
 	 * Gets a specific user's selected therapy
 	 * @param userId the id of the user
 	 * @return the user's selected therapy if found, "Nessuna" otherwise
 	 */
-	fun getTherapyForUser(userId: Int): Therapy {
-		return therapyDAO.getTherapyForUser(userId)
-	}
+	suspend fun getTherapyForUser(userId: Int): Therapy = withContext(Dispatchers.IO) { therapyDAO.getTherapyForUser(userId) }
 
 	/**
 	 * Gets all conditions for a specific user
 	 * @param userId the id of the user
 	 * @return the list of clinical conditions
 	 */
-	fun getConditionsForUser(userId: Int): List<ClinicalCondition> {
-		return conditionDAO.getConditionsForUser(userId)
-	}
+	suspend fun getConditionsForUser(userId: Int): List<ClinicalCondition> = withContext(Dispatchers.IO) { conditionDAO.getConditionsForUser(userId) }
 }

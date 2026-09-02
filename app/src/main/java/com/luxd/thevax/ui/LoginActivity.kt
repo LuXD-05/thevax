@@ -12,6 +12,8 @@ import com.luxd.thevax.databinding.ActivityLoginBinding
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.repositories.UserRepository
 import com.luxd.thevax.services.SessionService
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
@@ -67,16 +69,20 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        // If validation went fine, then login
-        val user = repo.login(email, password)
+        lifecycleScope.launch {
 
-        // If user logged
-        if (user != null) {
-            // Load MainActivity
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        } else {
-            showError("Errore: credenziali errate")
+            // If validation went fine, then login
+            val user = repo.login(email, password)
+
+            // If user logged
+            if (user != null) {
+                // Load MainActivity
+                startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                finish()
+            } else {
+                showError("Errore: credenziali errate")
+            }
+
         }
     }
 

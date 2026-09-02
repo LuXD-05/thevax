@@ -4,16 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
-import com.luxd.thevax.R
 import com.luxd.thevax.databinding.ActivityRegisterBinding
 import com.luxd.thevax.db.DatabaseHelper
 import com.luxd.thevax.db.DAOs.TherapyDAO
@@ -22,6 +19,8 @@ import com.luxd.thevax.db.entities.RegisterDTO
 import com.luxd.thevax.db.DAOs.ClinicalConditionDAO
 import com.luxd.thevax.db.entities.Therapy
 import com.luxd.thevax.db.repositories.UserRepository
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -34,6 +33,7 @@ class RegisterActivity : AppCompatActivity() {
 	private val conditionDAO by lazy { ClinicalConditionDAO(db.writableDatabase) }
 
 	private var availableConditions = listOf<ClinicalCondition>()
+	private var filteredConditions = listOf<ClinicalCondition>()
 	private val conditions = mutableListOf<ClinicalCondition>()
 	private var therapies = listOf<Therapy>()
 
@@ -58,16 +58,26 @@ class RegisterActivity : AppCompatActivity() {
 
 		// Setup dropdown with therapies
 		val dropdownTherapies = arrayOf("Nessuna") + therapies.map { it.name }.toTypedArray()
-		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).setSimpleItems(dropdownTherapies)
+		(binding.autoCompleteTherapy as MaterialAutoCompleteTextView).apply {
+			setSimpleItems(dropdownTherapies)
 
-		// Setup dropdown with conditions
-		val dropdownConditions = availableConditions.map { it.conditionName }.toTypedArray()
-		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(dropdownConditions)
+			// Disable filtering so all items are shown even after selection or rotation
+			threshold = Int.MAX_VALUE
 
+			// Clear filter that might be applied by restored text after rotation
+			setText(text.toString(), false)
+
+			setOnItemClickListener {_, _, position, _ ->
+				val selected = dropdownTherapies[position]
+				setText(selected, false)
+			}
+		}
+
+		updateConditionsDropdown()
 
 		// Setup multi-select dropdown for conditions
 		binding.autoCompleteConditions.setOnItemClickListener { _, _, position, _ ->
-			val selected = availableConditions[position]
+			val selected = filteredConditions[position]
 			if (conditions.none { it.id == selected.id }) {
 				conditions.add(selected)
 				renderConditions()
@@ -141,17 +151,23 @@ class RegisterActivity : AppCompatActivity() {
 			conditions = conditions.toList()
 		)
 
-		// Registers the user in db
-		val user = repo.register(registerInfo)
+		lifecycleScope.launch {
+			// Registers the user in db
+			val user = repo.register(registerInfo)
 
-		if (user != null) {
-			startActivity(Intent(this, MainActivity::class.java))
-			finish()
-		} else {
-			showError("Errore: questa email è già registrata o non è stato possibile salvare i dati.")
+			// If success --> goes to main activity
+			if (user != null) {
+				startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
+				finish()
+			} else {
+				showError("Errore: questa email è già registrata o non è stato possibile salvare i dati.")
+			}
 		}
 	}
 
+	/**
+	 * Renders the conditions chips
+	 */
 	private fun renderConditions() {
 		binding.chipGroupConditions.removeAllViews()
 		conditions.forEach { condition ->
@@ -167,6 +183,19 @@ class RegisterActivity : AppCompatActivity() {
 		}
 		binding.chipGroupConditions.visibility = if (conditions.isEmpty()) View.GONE else View.VISIBLE
 		binding.tvNoConditions.visibility = if (conditions.isEmpty()) View.VISIBLE else View.GONE
+
+		updateConditionsDropdown()
+	}
+
+	/**
+	 * Updates the available conditions dropdown
+	 */
+	private fun updateConditionsDropdown() {
+		filteredConditions = availableConditions.filter { available ->
+			conditions.none { it.id == available.id }
+		}
+		val items = filteredConditions.map { it.conditionName }.toTypedArray()
+		(binding.autoCompleteConditions as MaterialAutoCompleteTextView).setSimpleItems(items)
 	}
 
 	private fun showError(msg: String) {

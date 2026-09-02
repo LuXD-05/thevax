@@ -28,7 +28,7 @@ class SessionService(context: Context) {
 	 * Gets the current user. Returns from cache if available, otherwise loads from DB using the saved ID.
 	 * @return the current User or null if not logged in
 	 */
-	fun getUser(): User? {
+	suspend fun getUser(): User? {
 		if (_user != null) return _user
 
 		val userId = getUserId()

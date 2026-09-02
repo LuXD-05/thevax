@@ -6,8 +6,6 @@ import android.database.sqlite.SQLiteOpenHelper
 
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "TheVax.db", null, 2) {
 
-    // TODO: handle operations in a background thread (like async/await, in order to not make the app crash & keep the main thread for the UI)
-
     // Called once when DB is first created
     override fun onCreate(db: SQLiteDatabase) {
         // Creates DB & FKs from schema

@@ -16,6 +16,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.luxd.thevax.adapters.VaccineAdapter
 import com.luxd.thevax.db.entities.ClinicalCondition
 import com.luxd.thevax.db.entities.Therapy
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
     private var _binding: FragmentHomeBinding? = null
@@ -33,60 +35,75 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentHomeBinding.bind(view)
 
-        // Fetch user data
-        currentUser = SessionService.getInstance().getUser() ?: return logout()
-        userTherapy = userRepo.getTherapyForUser(currentUser.id)
-        userConditions = userRepo.getConditionsForUser(currentUser.id).toMutableList()
-
-        // Update header card
-        binding.tvName.text = "${currentUser.firstName} ${currentUser.lastName}"
-        binding.tvAge.text = "Età: ${currentUser.age} | Sesso: ${currentUser.sex}"
-        binding.tvTherapies.text = "Terapia: ${userTherapy?.name ?: "Nessuna"}"
-        
-        val conditionsText = if (userConditions.isEmpty()) "Nessuna" else userConditions.joinToString(", ") { it.conditionName }
-        binding.tvConditions.text = "Condizioni: $conditionsText"
-
-        refreshData()
+        loadData()
     }
 
+    /**
+     * Loads data from db
+     */
+    private fun loadData() {
+        viewLifecycleOwner.lifecycleScope.launch {
+
+            // Fetch user therapy & conditions
+            currentUser = SessionService.getInstance().getUser() ?: return@launch logout()
+            userTherapy = userRepo.getTherapyForUser(currentUser.id)
+            userConditions = userRepo.getConditionsForUser(currentUser.id).toMutableList()
+
+            // Updates header card
+            binding.tvName.text = "${currentUser.firstName} ${currentUser.lastName}"
+            binding.tvAge.text = "Età: ${currentUser.age} | Sesso: ${currentUser.sex}"
+            binding.tvTherapies.text = "Terapia: ${userTherapy.name}"
+            val conditionsText = if (userConditions.isEmpty()) "Nessuna" else userConditions.joinToString(", ") { it.conditionName }
+            binding.tvConditions.text = "Condizioni: $conditionsText"
+
+            refreshData()
+        }
+    }
+
+    /**
+     * Refreshes vaccines list
+     */
     private fun refreshData() {
+        viewLifecycleOwner.lifecycleScope.launch {
 
-        // Fetch vaccines evaluations for user
-        val evaluations = vaccineRepo.evaluateVaccinesForUser(currentUser, userConditions)
+            // Fetch vaccines evaluations for user
+            val evaluations = vaccineRepo.evaluateVaccinesForUser(currentUser, userConditions)
 
-        // Updates counters
-        binding.tvRecCount.text = evaluations.count { it.second == "recommended" }.toString()
-        binding.tvOptCount.text = evaluations.count { it.second == "optional" }.toString()
-        binding.tvCntCount.text = evaluations.count { it.second == "contraindicated" }.toString()
+            // Updates counters
+            binding.tvRecCount.text = evaluations.count { it.second == "recommended" }.toString()
+            binding.tvOptCount.text = evaluations.count { it.second == "optional" }.toString()
+            binding.tvCntCount.text = evaluations.count { it.second == "contraindicated" }.toString()
 
-        // Draws list (or no vaccines)
-        if (evaluations.isEmpty()) {
-            binding.rvVaccines.visibility = View.GONE
-            binding.tvEmpty.visibility = View.VISIBLE
-        } else {
-            binding.rvVaccines.visibility = View.VISIBLE
-            binding.tvEmpty.visibility = View.GONE
+            // Draws list (or no vaccines)
+            if (evaluations.isEmpty()) {
+                binding.rvVaccines.visibility = View.GONE
+                binding.tvEmpty.visibility = View.VISIBLE
+            } else {
+                binding.rvVaccines.visibility = View.VISIBLE
+                binding.tvEmpty.visibility = View.GONE
 
-            // Setup vaccines recycler view
-            binding.rvVaccines.layoutManager = LinearLayoutManager(requireContext())
-            binding.rvVaccines.adapter = VaccineAdapter(evaluations) { vaccine, status ->
-                // Cant book contraindicated vaccines
-                if (status == "contraindicated") {
-                    Toast.makeText(requireContext(), "Non è possibile prenotare un vaccino controindicato.", Toast.LENGTH_LONG).show()
-                    return@VaccineAdapter
+                // Setup vaccines recycler view
+                binding.rvVaccines.layoutManager = LinearLayoutManager(requireContext())
+                binding.rvVaccines.adapter = VaccineAdapter(evaluations) { vaccine, status ->
+                    // Cant book contraindicated vaccines
+                    if (status == "contraindicated") {
+                        Toast.makeText(requireContext(), "Non è possibile prenotare un vaccino controindicato.", Toast.LENGTH_LONG).show()
+                        return@VaccineAdapter
+                    }
+                    // Opens vaccine booking dialog
+                    val dialog = VaxBookingHomeDialogFragment(
+                        vaccine = vaccine,
+                        status = status,
+                        userId = currentUser.id
+                    ) {
+                        // Callback chiamata alla conferma
+                        Toast.makeText(requireContext(), "Prenotazione confermata!", Toast.LENGTH_SHORT).show()
+                        refreshData()
+                    }
+                    dialog.show(parentFragmentManager, "VaxBookingHomeDialog")
                 }
-                // Opens vaccine booking dialog
-                val dialog = VaxBookingHomeDialogFragment(
-                    vaccine = vaccine,
-                    status = status,
-                    userId = currentUser.id
-                ) {
-                    // Callback chiamata alla conferma
-                    Toast.makeText(requireContext(), "Prenotazione confermata!", Toast.LENGTH_SHORT).show()
-                    refreshData()
-                }
-                dialog.show(parentFragmentManager, "VaxBookingHomeDialog")
             }
+
         }
 
     }
